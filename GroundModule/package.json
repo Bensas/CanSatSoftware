@@ -1,7 +1,7 @@
 {
   "name": "GroundModule",
   "version": "1.0.0",
-  "author": "Bensas",
+  "author": "",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,9 +9,13 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "devDependencies": {
     "electron": "^11.1.1"
+  },
+  "dependencies": {
+    "chart.js": "^2.9.4",
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0"
   }
 }

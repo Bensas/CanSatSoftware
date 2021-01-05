@@ -1,0 +1,14 @@
+body {
+  background: grey;
+  display: flex;
+  flex-direction: row;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.telemetry-overview {
+  background: black;
+}
