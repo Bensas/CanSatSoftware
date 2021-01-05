@@ -7,7 +7,8 @@ ElectronJS Application to be run on a laptop to communicate with the Container, 
 Requirements:
 - NodeJS
 - NPM
-Enter the repo and run the following commands:
+
+To run the Application, enter the repo and run the following commands:
 1) ```cd GroundModule```
 2) ```npm install```
 3) ```npm start```
