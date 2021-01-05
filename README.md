@@ -12,3 +12,6 @@ To run the Application, enter the repo and run the following commands:
 1) ```cd GroundModule```
 2) ```npm install```
 3) ```npm start```
+
+# FlightSoftware
+Arduino software for a the Container and the two Payloads, along with common libraries they both use.
