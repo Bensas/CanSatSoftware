@@ -35,7 +35,14 @@ void loop() {
 			//ejecutar stateLoop
       break;
     case STATE_PAYLOAD_1_DEPLOY:
-			//ejecutar stateLoop
+      //check for commands
+      //check for payload telemetry and relay and update sp_package_count
+      // if (hasMessageFromPayload()) {
+
+      // }
+      //measure altitude and switch state
+      //take all sensor measurements
+      //send telemetryPackage to ground
       break;
     case STATE_PAYLOAD_2_DEPLOY:
 			//ejecutar stateLoop
@@ -53,7 +60,9 @@ void switchToState(int8_t newState) {
 			//ejecutar stateInit
       break;
     case STATE_PAYLOAD_1_DEPLOY:
-			//ejecutar stateInit
+			//write current?state = PAYLOAS_2_DEPLOY
+      //activate servo
+      //send command
       break;
     case STATE_PAYLOAD_2_DEPLOY:
 			//ejecutar stateInit
