@@ -119,14 +119,14 @@ void loop() {
       
       //take all sensor measurements
       actualTime = millis();
-      if (send_telemetry == true && simulationActivated == false && actualTime - lastTime > 1000) {
+      if (send_telemetry == true && simulationEnabled== false && actualTime - lastTime > 1000) {
         lastTime = actualTime;
         float temperatureInCelsius = bmp.readTemperature();
         float pressure = bmp.readPressure();
         float altitude = bmp.readAltitude(1013.25);
-        // me faltaria rotacion, con gps?
-        packageCount++; // habria que ver si los recibe?
+        //packageCount++; // habria que ver si los recibe?
         // send telemetryPackage to ground
+        communicationModule.addTelemetryPackageToGround()
       } else if (simulationActivated == true) {
         // if (variable de SIMP activada, recibi comando) {
         //   float temperatureInCelsius = bmp.readTemperature();
