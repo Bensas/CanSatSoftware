@@ -18,7 +18,9 @@
 #define STATE_PAYLOAD_2_DEPLOY 3
 #define STATE_LANDED 4
 
-#define SERVO_PIN
+#define SERVO_PIN ??
+
+#define TEAM_ID 1111
 
 DS3231 rtc;
 
@@ -31,7 +33,7 @@ struct ContainerTelemetryPackage {
     time_t missionTime; // 1 sec reslution
     uint16_t packetCount;
     uint8_t packetType[2]; // 1 byte
-    bool mode; // 1 byte
+    bool mode; // 1 byte TRUE = F, FALSE = S
     bool sp1Released;
     bool sp2Released;
     float altitude;
@@ -65,6 +67,8 @@ int8_t currentState = 0;
 bool sendTelemetry = false;
 bool simulationEnabled = false;
 bool simulationActivated = false;
+bool sp1Released = false;
+bool sp2Released = false;
 int16_t packageCount = 0;
 int16_t sp1PackageCount = 0;
 int16_t sp2PackageCount = 0;
@@ -119,14 +123,14 @@ void loop() {
       
       //take all sensor measurements
       actualTime = millis();
-      if (send_telemetry == true && simulationEnabled== false && actualTime - lastTime > 1000) {
+      if (send_telemetry == true && simulationActivated == false && actualTime - lastTime > 1000) {
         lastTime = actualTime;
         float temperatureInCelsius = bmp.readTemperature();
         float pressure = bmp.readPressure();
         float altitude = bmp.readAltitude(1013.25);
-        //packageCount++; // habria que ver si los recibe?
+        // me faltaria rotacion, con gps?
+        packageCount++; // habria que ver si los recibe?
         // send telemetryPackage to ground
-        communicationModule.addTelemetryPackageToGround()
       } else if (simulationActivated == true) {
         // if (variable de SIMP activada, recibi comando) {
         //   float temperatureInCelsius = bmp.readTemperature();
@@ -211,10 +215,12 @@ void switchToState(int8_t newState) {
 			//ejecutar stateInit
       break;
     case STATE_PAYLOAD_1_DEPLOY:
+      sp1Released = true;
       servo.write(x); // Cuantos grados?
       //send command??
       break;
     case STATE_PAYLOAD_2_DEPLOY:
+      sp2Released = true;
       servo.write(x); // Cuantos grados?
       //send command??
       break;
@@ -268,4 +274,13 @@ float readAltitude(float seaLevelhPa, float currentPa) {
   altitude = 44330 * (1.0 - pow(pressure / seaLevelhPa, 0.1903));
 
   return altitude;
+}
+
+struct ContainerTelemetryPackage createTelemetryPackage(float altitude, float temp, float voltage, time_t gpsTime, double gpsLat, double gpsLong, float gpsAltitude, uint8_t gpsSats){
+  struct ContainerTelemetryPackage ret = {TEAM_ID, TOMAR TIEMPO DEL RTC, packageCount, 
+                                          "C\0", simulationEnabled == false ? true : false, 
+                                          sp1Released, sp2Released, altitude, temp, voltage, 
+                                          gpsTime, gpsLat, gpsLong, gpsAltitude, gpsSats, 
+                                          currentState, sp1PackageCount, sp2PackageCount, ECHO};
+  return ret;
 }
