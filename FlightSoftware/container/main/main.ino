@@ -1,4 +1,8 @@
 #include <Wire.h>
+#include <DS3231.h>
+
+#include <SoftwareSerial.h> 
+#include <TinyGPS++.h>
 
 #include <cstdint>
 
@@ -23,6 +27,9 @@
 #define TEAM_ID 1111
 
 DS3231 rtc;
+
+SoftwareSerial gpsSerial(3,4);
+TinyGPS gps;
 
 Adafruit_BMP280 bmp;
 
@@ -51,7 +58,6 @@ struct ContainerTelemetryPackage {
 };
 
 struct PayloadTelemetryPackage {
-    uint8_t payloadId;
     uint16_t teamID; // 2 bytes
     time_t missionTime; // 1 sec reslution
     uint16_t packetCount;
@@ -79,15 +85,19 @@ void setup() {
   PM = false; // cosas del ds3231
   Century = false;
 
-  servo.attach(SERVO_PIN); 
-
-  pinMode(BEACON_PIN_NUMBER, OUTPUT); // Set buzzer - pin 9 as an output
+  gpsSerial.begin(9600);
 
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                 Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
                 Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                 Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                 Adafruit_BMP280::STANDBY_MS_500);
+
+  servo.attach(SERVO_PIN); 
+
+  pinMode(BEACON_PIN_NUMBER, OUTPUT); // Set buzzer - pin 9 as an output
+
+  
 
   
   //startupStateLogic
@@ -116,8 +126,8 @@ void loop() {
       
       if (payloadMessage == true) { // esto lo tomaria del xbee?
         payloadMessage = false;
-        // sp1PackageCount++;
-        // Armar package del payload con la info recibida para ground
+        sp1PackageCount++; // habria que ver si los recibe?
+        struct PayloadTelemetryPackage package = createPayloadTelemetryPackage(sp1PackageCoun, "S1", ufloat spAltitude, ufloat spTemp, ufloat spRotationRate)
         // Relay data
       }
       
@@ -128,8 +138,26 @@ void loop() {
         float temperatureInCelsius = bmp.readTemperature();
         float pressure = bmp.readPressure();
         float altitude = bmp.readAltitude(1013.25);
+        
+        int sensorValue = analogRead(A0);
+        float voltage = sensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+        
         // me faltaria rotacion, con gps?
         packageCount++; // habria que ver si los recibe?
+        //if (gps.time.isUpdated()) { que pasa si "no esta updated"?
+          time_t gpsTime = getActualUnix(gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
+        //}
+        //if (gps.location.isUpdated()) { que pasa si "no esta updated"?
+          double lat = gps.location.lat();
+          double lng = gps.location.lng();
+        //}
+        //if (gps.altitude.isUpdated()) que pasa si "no esta updated"?
+          double altitudeMeters = gps.altitude.meters();
+        //if (gps.satellites.isUpdated()) que pasa si "no esta updated"?
+          u_int32 satelites = gps.satellites.value(); // Number of satellites in use (u32)
+
+
+        struct ContainerTelemetryPackage package = createTelemetryPackage(altitude, temperatureInCelsius, voltage, gpsTime, lat, lng, altitudeMeters, satelites);
         // send telemetryPackage to ground
       } else if (simulationActivated == true) {
         // if (variable de SIMP activada, recibi comando) {
@@ -276,11 +304,30 @@ float readAltitude(float seaLevelhPa, float currentPa) {
   return altitude;
 }
 
-struct ContainerTelemetryPackage createTelemetryPackage(float altitude, float temp, float voltage, time_t gpsTime, double gpsLat, double gpsLong, float gpsAltitude, uint8_t gpsSats){
-  struct ContainerTelemetryPackage ret = {TEAM_ID, TOMAR TIEMPO DEL RTC, packageCount, 
-                                          "C\0", simulationEnabled == false ? true : false, 
+struct ContainerTelemetryPackage createTelemetryPackage(float altitude, float temp, float voltage, time_t gpsTime, double gpsLat, double gpsLong, float gpsAltitude, uint8_t gpsSats) {
+  struct ContainerTelemetryPackage ret = {TEAM_ID, getActualUnix(Clock.getYear(), Clock.getMonth(Century), 
+                                          Clock.getDate(), Clock.getHour(h12, PM), Clock.getMinute(), 
+                                          Clock.getSecond()), packageCount, "C\0", 
+                                          simulationEnabled == false ? true : false, 
                                           sp1Released, sp2Released, altitude, temp, voltage, 
                                           gpsTime, gpsLat, gpsLong, gpsAltitude, gpsSats, 
                                           currentState, sp1PackageCount, sp2PackageCount, ECHO};
   return ret;
+}
+
+struct PayloadTelemetryPackage createPayloadTelemetryPackage(uint16_t packetCount, uint8_t packetType[2], ufloat spAltitude, ufloat spTemp, ufloat spRotationRate) {
+  struct PayloadTelemetryPackage ret = {TEAM_ID, getActualUnix(Clock.getYear(), Clock.getMonth(Century), Clock.getDate(), Clock.getHour(h12, PM), 
+                                        Clock.getMinute(), Clock.getSecond()), packetCount, packetType, spAltitude, spTemp, spRotationRate};
+  return ret;
+}
+
+time_t getActualUnix(uint8_t yy, uint8_t mm, uint8_t dd, uint8_t hh, uint8_t mi, uint8_t ss){
+  struct tm breakdown;
+  breakdown.tm_year = yy - 1900; /* years since 1900 */
+  breakdown.tm_mon = mm - 1;
+  breakdown.tm_mday = dd;
+  breakdown.tm_hour = hh;
+  breakdown.tm_min = mi;
+  breakdown.tm_sec = ss;
+  return mktime(&breakdown);
 }
