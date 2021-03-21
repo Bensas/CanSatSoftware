@@ -49,7 +49,6 @@ struct ContainerTelemetryPackage {
 };
 
 struct PayloadTelemetryPackage {
-    uint8_t payloadId;
     uint16_t teamID; // 2 bytes
     time_t missionTime; // 1 sec reslution
     uint16_t packetCount;
