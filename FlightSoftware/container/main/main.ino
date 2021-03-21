@@ -22,6 +22,14 @@
 #define STATE_PAYLOAD_2_DEPLOY 3
 #define STATE_LANDED 4
 
+//ver direcciones en memoria de EEPROM
+#define SEND_TELEMETRY_ADDR ??
+#define SIMULATION_MODE_ADDR ??
+#define PACKAGE_COUNT_ADDR ??
+#define SP1_PCOUNT_ADDR ??
+#define SP2_PCOUNT_ADDR ??
+#define CURRENT_STATE_ADDR ??
+
 #define SERVO_PIN ??
 
 #define TEAM_ID 1111
@@ -73,8 +81,10 @@ int8_t currentState = 0;
 bool sendTelemetry = false;
 bool simulationEnabled = false;
 bool simulationActivated = false;
+bool simulationMode = false;
 bool sp1Released = false;
 bool sp2Released = false;
+bool preDeploy = false;
 int16_t packageCount = 0;
 int16_t sp1PackageCount = 0;
 int16_t sp2PackageCount = 0;
@@ -96,29 +106,45 @@ void setup() {
   servo.attach(SERVO_PIN); 
 
   pinMode(BEACON_PIN_NUMBER, OUTPUT); // Set buzzer - pin 9 as an output
-
   
-
+  //retrieve variables
+  EEPROM.get(SEND_TELEMETRY_ADDR, sendTelemetry);
+  EEPROM.get(SIMULATION_MODE_ADDR, simulationMode);
+  EEPROM.get(PACKAGE_COUNT_ADDR, packageCount);
+  EEPROM.get(SP1_PCOUNT_ADDR, sp1PackageCount);
+  EEPROM.get(SP2_PCOUNT_ADDR, sp2PackageCount);
+  EEPROM.get(CURRENT_STATE_ADDR, currentState);
   
-  //startupStateLogic
-  //retrieve sendTelemetry from EEPROM
-  //retrieve simulationMode from EEPROM
-  //retrieve packageCount from EEPROM
-  //retrieve sp1PackageCount from EEPROM
-  //retrieve sp2PackageCount from EEPROM
-
-  //retrieve currentState from EEPROM and switch to that state
-	// switchToState(currentState);
-
+  //ESTO ES NECESARIO?
+  if(currentState == 0 || currentState == STATE_PRE_DEPLOY) {//en el state diagram dice si currentState = null (pero currentState es int ?) 
+    //write currentState == PRE_DEPLOY en EEPROM
+  } 
+  else {
+    switchToState(currentState);
+  }
 }
 
 void loop() {
   switch(currentState) {
     case STATE_STARTUP:
-			//ejecutar stateLoop
+      //ejecutar stateLoop
       break;
     case STATE_PRE_DEPLOY:
-		  //ejecutar stateLoop
+      checkCommands();
+      //si esto se repite en STATE_PAYLOAD_1_DEPLOY podriamos meterlo en una funcion y llamar eso directamente?
+      float altitude = bmp.readAltitude(1013.25);
+      actualTime = millis();
+      if (send_telemetry == true && simulationActivated == false && actualTime - lastTime > 1000) {
+        lastTime = actualTime;
+        float pressure = bmp.readPressure();
+        float altitude = bmp.readAltitude(1013.25);
+        int sensorValue = analogRead(A0);
+        float voltage = sensorValue * (5.0 / 1023.0);
+        //creo otro telemetry package?
+      }
+      if (altitude < 500) {
+        switchToState(STATE_PAYLOAD_1_DEPLOY);
+      }
       break;
     case STATE_PAYLOAD_1_DEPLOY:
       
@@ -175,7 +201,7 @@ void loop() {
       break;
       
     case STATE_PAYLOAD_2_DEPLOY:
-			checkCommands(); 
+      checkCommands(); 
       if (payloadMessage == true) { // esto lo tomaria del xbee?
         payloadMessage = false;
         // ver de que payload vino
@@ -214,7 +240,7 @@ void loop() {
       break;
       
     case STATE_LANDED:
-			//tone(buzzer, 1000); // Send 1KHz sound signal...
+      //tone(buzzer, 1000); // Send 1KHz sound signal...
       //delay(1000);        // Habria que hacer esto?
       //noTone(buzzer);     // Los delays son malos, no se como deberia sonar el buzzer, si es constante usamos lo del setup, sino hacemos con millis algo.
 
@@ -233,14 +259,14 @@ void loop() {
       }
       
       break;
-	}
+  }
 }
 
 void switchToState(int8_t newState) {
   currentState = newState;
-	switch(newState) {
+  switch(newState) {
     case STATE_PRE_DEPLOY:
-			//ejecutar stateInit
+      //ejecutar stateInit
       break;
     case STATE_PAYLOAD_1_DEPLOY:
       sp1Released = true;
@@ -253,10 +279,10 @@ void switchToState(int8_t newState) {
       //send command??
       break;
     case STATE_LANDED:
-			sendTelemetry = false;
+      sendTelemetry = false;
       tone(buzzer, 1000); // Send 1KHz sound signal...
       break;
-	}
+  }
 }
 
 void checkCommands(){
