@@ -1,8 +1,108 @@
-#include <cstdint>
-#include <SoftwareSerial.h>
-#include <RTC.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <DS3231.h>
 #include <XBee.h>
-#include "CommandQueue.h"
+
+#define SIMULATION_DISABLED 0
+#define SIMULATION_ENABLED 1
+#define SIMULATION_ACTIVATED 2
+
+/////    QUEUE.H START    /////
+#define NULL 0
+
+struct PayloadCommandQueueNode {
+  uint8_t data;
+  PayloadCommandQueueNode* next;
+};
+
+class PayloadCommandQueue {// '0': telemetry off, '1': telemetry on
+  public:
+  PayloadCommandQueueNode* head; //Payload telemetry example: 2764,00:01:32,100,S1,700.2,18.2,3.2
+  PayloadCommandQueueNode* tail;
+  uint8_t length = 0;
+
+  void add(uint8_t nextCommand) {
+    PayloadCommandQueueNode *tmp = new PayloadCommandQueueNode;
+    tmp->data = nextCommand;
+    tmp->next = NULL;
+    if(head == NULL)
+    {
+        head = tmp;
+        tail = tmp;
+    }
+    else
+    {
+        tail->next = tmp;
+        tail = tail->next;
+    }
+    length++;
+  }
+
+  void removeHead() {
+    if (isEmpty()){
+      return;
+    }
+    PayloadCommandQueueNode* temp = head->next;
+    delete head;
+    head = temp;
+    length--;
+  }
+
+  bool isEmpty(){
+    return length == 0;
+  }
+};
+
+//Container tlemetry example 2764,00:01:32,10,C,F,N,N,700.2,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,0,0,CXON
+
+struct TelemetryPacketQueueNode {
+  uint8_t* data;
+  uint8_t dataLength;
+  TelemetryPacketQueueNode* next;
+};
+
+class TelemetryPacketQueue {
+  public:
+  TelemetryPacketQueueNode* head; //Payload telemetry example: 2764,00:01:32,100,S1,700.2,18.2,3.2
+  TelemetryPacketQueueNode* tail;
+  uint8_t length = 0;
+
+  void add(uint8_t nextCommand[], uint8_t nextCommandLength) {
+    TelemetryPacketQueueNode *tmp = new TelemetryPacketQueueNode;
+    tmp->data = nextCommand;
+    tmp->dataLength = nextCommandLength;
+    tmp->next = NULL;
+    if(head == NULL)
+    {
+        head = tmp;
+        tail = tmp;
+    }
+    else
+    {
+        tail->next = tmp;
+        tail = tail->next;
+    }
+    length++;
+  }
+
+  void removeHead() {
+    if (isEmpty()){
+      return;
+    }
+    TelemetryPacketQueueNode* temp = head->next;
+    delete head;
+    head = temp;
+    length--;
+  }
+
+  bool isEmpty(){
+    return length == 0;
+  }
+};
+
+
+/////    QUEUE.H END    /////
+
 
 #define STATE_RTC_SETUP -1
 #define STATE_P1_COMMUNICATION 0
@@ -11,53 +111,54 @@
 #define STATE_GROUND_COMMUNICATION_2 3
 #define STATE_GROUND_COMMUNICATION_3 4
 
-#define SIMULATION_DISABLE 0
-#define SIMULATION_ENABLE 0
-#define SIMULATION_ACTIVATE 1
-
-#define GROUND_NET_ID {0xACC} // 2764
-#define PAYLOADS_NET_ID {0xAD1} // 2769
-
 // Pin receiving the one-pulse-per-second signal from the RTC.
 // This should be an interrupt-capable pin.
 #define RTC_INTERRUPT_PIN 2;
 
 
 class ContainerCommunicationModule {
-  uint8_t currentState = STATE_IDLE;
+  public:
+  uint8_t currentState = STATE_RTC_SETUP;
 
-  RTC_DS3231 rtc;
+  DS3231 rtc;
   unsigned long secStartMillis = 0;
   uint8_t currentSec = 0;
 
   bool hasMessage;
   bool isBusy;
-  uint8_t buffer[256];
-  uint16_t bufferIndex;
+  uint8_t lastCommandEcho[10];
 
   uint16_t packageCount;
 
 
-  SoftwareSerial XBee(2, 3);
+  XBee xbee = XBee();
   ZBRxResponse responseObj = ZBRxResponse();
 
   ZBTxRequest requestObj;
-  ZBTxStatusResponse requestStatusObj = new ZBTxStatusResponse();
+  ZBTxStatusResponse requestStatusObj = ZBTxStatusResponse();
 
-  uint8_t idCmd[] = {'I','D'};
-  AtCommandRequest atCommandRequest = AtCommandRequest(idCmd, idValue, sizeof(idValue));
+  
+  uint8_t GROUND_NET_ID[1] {0xACC}; // 2764
+  uint8_t PAYLOADS_NET_ID[1] {0xAD1}; // 2769
+  uint8_t ID_CMD[2] {'I','D'};
+  AtCommandRequest atCommandRequest = AtCommandRequest(ID_CMD, GROUND_NET_ID, sizeof(GROUND_NET_ID));
   AtCommandResponse atCommandResponse = AtCommandResponse();
 
 
-  PayloadCommandQueue payload1CommandQueue = new PayloadCommandQueue();
-  PayloadCommandQueue payload2CommandQueue = new PayloadCommandQueue();
-  TelemetryPacketQueue telemetryPacketQueue = new TelemetryPacketQueue();
+  PayloadCommandQueue payload1CommandQueue = PayloadCommandQueue();
+  PayloadCommandQueue payload2CommandQueue = PayloadCommandQueue();
+  TelemetryPacketQueue telemetryPacketQueue = TelemetryPacketQueue();
 
   // Specify the address of the remote XBee (this is the SH + SL)
-  XBeeAddress64 payload1Address = new XBeeAddress64(0x0013a200, 0x403e0f30);
-  XBeeAddress64 payload2Address = new XBeeAddress64(0x0013a200, 0x403e0f30);
-  XBeeAddress64 groundAddress = new XBeeAddress64(0x0013a200, 0x403e0f30);
+  XBeeAddress64 payload1Address = XBeeAddress64(0x0013a200, 0x403e0f30);
+  XBeeAddress64 payload2Address = XBeeAddress64(0x0013a200, 0x403e0f30);
+  XBeeAddress64 groundAddress = XBeeAddress64(0x0013a200, 0x403e0f30);
 
+  void (*setContainerTelemetryActivated)(bool telemetryActivated);
+
+  void (*setLatestSimulationPressureValue)(int pressureVal);
+
+  void (*setContainerSimulationMode)(int newSimulationMode);
 
   void init() {
     // Start the serial port
@@ -67,15 +168,7 @@ class ContainerCommunicationModule {
 
   }
 
-  void setContainerTelemetryActivated(bool telemetryActivated) {
-
-  }
-
-  void addSimulationPressureValue(int pressureVal) {
-
-  }
-
-  void setRtcimeFromPacket(uint8_t* packetData, uint8_t packetLength) {
+  void setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength) {
     //Example command: CMD,2764,ST,13:35:59
     if (packetLength != 20 || packetData[9] != 'S' || packetData[10] != 'T'){
       // console.log('Rtc time set package is invalid!');
@@ -85,13 +178,13 @@ class ContainerCommunicationModule {
     uint8_t buffer[3] = {0, 0, 0};
 
     memcpy(buffer, &packetData[12], 2);
-    void setHour(atoi(buffer)); 
+    rtc.setHour(atoi(buffer)); 
 
     memcpy(buffer, &packetData[15], 2);
-    void setMinute(atoi(buffer)); 
+    rtc.setMinute(atoi(buffer)); 
 
     memcpy(buffer, &packetData[18], 2);
-    void setSecond(atoi(buffer)); 
+    rtc.setSecond(atoi(buffer)); 
   }
 
   void parseReceivedPacket(uint8_t* packetData, uint8_t packetLength) {
@@ -117,13 +210,13 @@ class ContainerCommunicationModule {
     else if (packetData[9] == 'S' && packetData[10] == 'I') { //SIM or SIMP command
       if (packetData[12] == ',') { //SIM command
         if (packetData[13] =='D') {
-          setContainerSimulationMode(SIMULATION_DISABLE);
+          setContainerSimulationMode(SIMULATION_DISABLED);
         }
         else if (packetData[13] =='E') {
-          setContainerSimulationMode(SIMULATION_ENABLE);
+          setContainerSimulationMode(SIMULATION_ENABLED);
         }
         else {
-          setContainerSimulationMode(SIMULATION_ACTIVATE);
+          setContainerSimulationMode(SIMULATION_ACTIVATED);
         }
       } else { //SIMP command
         uint8_t pressureValueBuffer[8];
@@ -132,7 +225,7 @@ class ContainerCommunicationModule {
           pressureValueBuffer[i-14] = packetData[i];
         }
         pressureValueBuffer[i] = 0;
-        addSimulationPressureValue(atoi(pressureValueBuffer));
+        setLatestSimulationPressureValue(atoi(pressureValueBuffer));
       }
     }
     else if (packetData[9] == 'S' && packetData[10] == 'P') { //SP1X or SP2X command
@@ -150,7 +243,8 @@ class ContainerCommunicationModule {
         }
       }
     }
-
+    memcpy(lastCommandEcho, packetData, packetLength);
+    lastCommandEcho[packetLength] = 0;
   }
 
   void parseTelemetryPacket(uint8_t* packetData, uint8_t packetLength) {
@@ -198,18 +292,18 @@ class ContainerCommunicationModule {
   }
 
   void sendNextPayload1Command() {
-    requestObj = ZBTxRequest(payload1Address, payload1CommandQueue.command, sizeof(uint8_t));
-    xbee.send(zbTx);
+    requestObj = ZBTxRequest(payload1Address, payload1CommandQueue.head->data, sizeof(uint8_t));
+    xbee.send(requestObj);
   }
 
   void sendNextPayload2Command() {
-    requestObj = ZBTxRequest(payload2Address, payload2CommandQueue.command, sizeof(uint8_t));
-    xbee.send(zbTx);
+    requestObj = ZBTxRequest(payload2Address, payload2CommandQueue.head->data, sizeof(uint8_t));
+    xbee.send(requestObj);
   }
 
   void sendNextTelemetryPacket(){
     requestObj = ZBTxRequest(groundAddress, telemetryPacketQueue.head->data, telemetryPacketQueue.head->dataLength);
-    xbee.send(zbTx);
+    xbee.send(requestObj);
   }
 
   void loop() {
@@ -241,7 +335,7 @@ class ContainerCommunicationModule {
           }
         } else if (receivePackets() == ZB_TX_STATUS_RESPONSE) {
           //We received an update on a previously sent command
-          if (txStatus.getDeliveryStatus() == SUCCESS) {
+          if (requestStatusObj.getDeliveryStatus() == SUCCESS) {
             payload1CommandQueue.removeHead(); //We should ideally verify whether this is actually a payload 1 command (although it would be unlikely for it to be a Payload 2 command)
           } else {
             //We didn't get an ack, so we should resend, right?
@@ -268,7 +362,7 @@ class ContainerCommunicationModule {
           }
         } else if (receivePackets() == ZB_TX_STATUS_RESPONSE) {
           //We received an update on a previously sent command
-          if (txStatus.getDeliveryStatus() == SUCCESS) {
+          if (requestStatusObj.getDeliveryStatus() == SUCCESS) {
             payload2CommandQueue.removeHead(); //We should ideally verify whether this is actually a payload 2 command (although it would be unlikely for it to be a Payload 1 command)
           } else {
             //We didn't get an ack, so we should resend, right?
@@ -290,7 +384,7 @@ class ContainerCommunicationModule {
           }
         } else if (receivePackets() == ZB_TX_STATUS_RESPONSE) {
           //We received an update on a previously sent telemetry packet
-          if (txStatus.getDeliveryStatus() == SUCCESS) {
+          if (requestStatusObj.getDeliveryStatus() == SUCCESS) {
             telemetryPacketQueue.removeHead(); 
           } else {
             // We didn't get an ack, so we should resend, right?
@@ -310,7 +404,7 @@ class ContainerCommunicationModule {
         //receive ground simp data
         if (receivePackets() == ZB_TX_STATUS_RESPONSE) {
           //We received an update on a previously sent telemetry packet
-          if (txStatus.getDeliveryStatus() == SUCCESS) {
+          if (requestStatusObj.getDeliveryStatus() == SUCCESS) {
             telemetryPacketQueue.removeHead(); 
           } else {
             // We didn't get an ack, so we should resend, right?
@@ -322,7 +416,7 @@ class ContainerCommunicationModule {
         //check p2 telemetry data ack / resend
         if (receivePackets() == ZB_TX_STATUS_RESPONSE) {
           //We received an update on a previously sent telemetry packet
-          if (txStatus.getDeliveryStatus() == SUCCESS) {
+          if (requestStatusObj.getDeliveryStatus() == SUCCESS) {
             telemetryPacketQueue.removeHead(); 
           } else {
             // We didn't get an ack, so we should resend, right?
@@ -337,34 +431,40 @@ class ContainerCommunicationModule {
     currentState = newState;
     switch(newState) {
       case STATE_P1_COMMUNICATION:
-        if (payload1Commands.command != NULL) {
+        if (!payload1CommandQueue.isEmpty()) {
           switchToNetId(PAYLOADS_NET_ID);
           sendNextPayload1Command();
         }
         break;
       case STATE_P2_COMMUNICATION:
-        if (payload2Commands.command != NULL) {
+        if (!payload2CommandQueue.isEmpty()) {
           sendNextPayload2Command();
         }
         break;
       case STATE_GROUND_COMMUNICATION_1:
         switchToNetId(GROUND_NET_ID);
         //Send own telemetry data
-        sendNextTelemetryPacket();
+        if (!telemetryPacketQueue.isEmpty()){
+          sendNextTelemetryPacket();
+        }
         break;
       case STATE_GROUND_COMMUNICATION_2:
         //Send p1 telemetry data
-        sendNextTelemetryPacket();
+        if (!telemetryPacketQueue.isEmpty()){
+          sendNextTelemetryPacket();
+        }
         break;
       case STATE_GROUND_COMMUNICATION_3:
         //Send p2 telemetry data
-        sendNextTelemetryPacket();
+        if (!telemetryPacketQueue.isEmpty()){
+          sendNextTelemetryPacket();
+        }
         break;
     }
   }
 
   void manageStateSwitching() {
-    uint8_t rtcSeconds = rtc.getSeconds();
+    uint8_t rtcSeconds = rtc.getSecond();
     if (rtcSeconds != currentSec) {
       switchToState(STATE_P1_COMMUNICATION);
       currentSec = rtcSeconds;
@@ -389,4 +489,4 @@ class ContainerCommunicationModule {
       }
     }
   }
-}
+};
