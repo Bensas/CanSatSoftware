@@ -79,9 +79,9 @@ class ContainerCommunicationModule {
   void sendNextPayload2Command();
 
   void sendNextTelemetryPacket();
-  void loop();
+  void loop(uint8_t rtcSeconds);
 
   void switchToState(int8_t newState);
 
-  void manageStateSwitching();
+  void manageStateSwitching(uint8_t rtcSeconds);
 };

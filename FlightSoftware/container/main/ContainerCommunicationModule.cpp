@@ -142,7 +142,7 @@ void ContainerCommunicationModule::sendNextTelemetryPacket(){
   xbee.send(requestObj);
 }
 
-void ContainerCommunicationModule::loop() {
+void ContainerCommunicationModule::loop(uint8_t rtcSeconds) {
   if (currentState == STATE_RTC_SETUP) {
     if (receivePackets() == ZB_RX_RESPONSE) {
       uint8_t* packetData = responseObj.getData();
@@ -157,7 +157,7 @@ void ContainerCommunicationModule::loop() {
     return;
   }
 
-  manageStateSwitching();
+  manageStateSwitching(rtcSeconds);
   switch(currentState) {
     case STATE_P1_COMMUNICATION:
       if (receivePackets() == ZB_RX_RESPONSE) { //We received  telemetry
@@ -299,8 +299,7 @@ void ContainerCommunicationModule::switchToState(int8_t newState) {
   }
 }
 
-void ContainerCommunicationModule::manageStateSwitching() {
-  uint8_t rtcSeconds = rtc.getSecond();
+void ContainerCommunicationModule::manageStateSwitching(uint8_t rtcSeconds) {
   if (rtcSeconds != currentSec) {
     switchToState(STATE_P1_COMMUNICATION);
     currentSec = rtcSeconds;

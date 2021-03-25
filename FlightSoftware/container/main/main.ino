@@ -24,6 +24,9 @@
 
 #define BEACON_PIN_NUMBER  9//buzzer to arduino pin 9
 
+#define GPS_RX_PIN 4
+#define GPS_TX_PIN 5
+
 //Enums
 #define STATE_STARTUP 0
 #define STATE_PRE_DEPLOY 1
@@ -82,10 +85,12 @@ struct PayloadTelemetryPackage {
 
 //External Components
 DS3231 rtc;
-SoftwareSerial gpsSerial(3, 4);
 TinyGPSPlus gps;
 Adafruit_BMP280 bmp;
 Servo servo;
+
+// The serial connection to the GPS device
+SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
 
 //State variables
 bool sendTelemetry = false;
@@ -99,10 +104,12 @@ time_t sp2DeployTime = 0;
 
 float latestSimulationPressureValue = 0;
 
-unsigned long actualTime, lastTime;
-
 //RTC DS3231 info variables
 bool H12, PM, CENTURY;
+uint8_t currentSec = 0;
+
+//BMP calibratoin
+float bmpBasePressure;
 
 ContainerCommunicationModule communicationModule = ContainerCommunicationModule();
 
@@ -167,7 +174,7 @@ void setup() {
                 Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
                 Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                 Adafruit_BMP280::STANDBY_MS_500);
-
+  bmpBasePressure = bmp.readPressure();
   servo.attach(SERVO_PIN); 
 
   pinMode(BEACON_PIN_NUMBER, OUTPUT);
@@ -185,6 +192,8 @@ void setup() {
   communicationModule.setContainerTelemetryActivated = &setContainerTelemetryActivated;
   communicationModule.setContainerSimulationMode = &setContainerSimulationMode;
   communicationModule.setLatestSimulationPressureValue = &setLatestSimulationPressureValue;
+  communicationModule.init();
+  currentSec = rtc.getSecond();
 
   //If there was no state saved in EEPROM, currentState will equal STATE_STARTUP
   if(currentState == STATE_STARTUP) {
@@ -196,35 +205,32 @@ void setup() {
 }
 
 void loop() {
+  uint8_t rtcSeconds = rtc.getSecond();
+  communicationModule.loop(rtcSeconds);
   switch(currentState) {
     case STATE_STARTUP:
-      //ejecutar stateLoop
       break;
     case STATE_PRE_DEPLOY:
       //si esto se repite en STATE_PAYLOAD_1_DEPLOY podriamos meterlo en una funcion y llamar eso directamente?
-      float altitude = bmp.readAltitude(1013.25);
-      actualTime = millis();
-      if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && actualTime - lastTime > 1000) {
-        lastTime = actualTime;
+      float altitude = bmp.readAltitude(bmpBasePressure);
+      if (sendTelemetry == true && simulationMode != SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
+        currentSec = rtcSeconds;
         float pressure = bmp.readPressure();
-        float altitude = bmp.readAltitude(1013.25);
-        int sensorValue = analogRead(A0);
-        float voltage = sensorValue * (5.0 / 1023.0);
-        //creo otro telemetry package?
+        float altitude = bmp.readAltitude(bmpBasePressure);
+        float voltage = analogRead(A0) * (5.0 / 1023.0);
+
       }
       if (altitude < 500) {
         switchToState(STATE_PAYLOAD_1_DEPLOY);
       }
       break;
     case STATE_PAYLOAD_1_DEPLOY:
-            
       //take all sensor measurements
-      unsigned long actualTime = millis();
-      if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && actualTime - lastTime > 1000) {
-        lastTime = actualTime;
+      if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
+        currentSec = rtcSeconds;
         float temperatureInCelsius = bmp.readTemperature();
         float pressure = bmp.readPressure();
-        float altitude = bmp.readAltitude(1013.25);
+        float altitude = bmp.readAltitude(bmpBasePressure);
         
         int sensorValue = analogRead(A0);
         float voltage = sensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
@@ -253,14 +259,11 @@ void loop() {
       break;
       
     case STATE_PAYLOAD_2_DEPLOY:
-      
-      //take all sensor measurements
-      actualTime = millis();
-      if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && actualTime - lastTime > 1000) {
-        lastTime = actualTime;
+      if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
+        currentSec = rtcSeconds;
         float temperatureInCelsius = bmp.readTemperature();
         float pressure = bmp.readPressure();
-        float altitude = bmp.readAltitude(1013.25);
+        float altitude = bmp.readAltitude(bmpBasePressure);
         // me faltaria rotacion, con gps?
         packageCount++; // habria que ver si los recibe?
         // send telemetryPackage to ground
@@ -268,7 +271,7 @@ void loop() {
         // if (variable de SIMP activada, recibi comando) {
         //   float temperatureInCelsius = bmp.readTemperature();
         //   float pressure = valor del SIMP;
-        //   float altitude = readAltitude(1013.25, pressure);
+        //   float altitude = readAltitude(bmpBasePressure, pressure);
         //   packageCount++;
         //   send telemetryPackage to ground
         // }
