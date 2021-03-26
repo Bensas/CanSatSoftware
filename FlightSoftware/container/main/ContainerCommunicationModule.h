@@ -1,6 +1,7 @@
 #include "Queue.h"
 #include <stdlib.h>
 #include <stdint.h>
+#include <SoftwareSerial.h>
 #include <DS3231.h>
 #include <XBee.h>
 
@@ -34,7 +35,7 @@ class ContainerCommunicationModule {
   uint16_t packageCount;
 
 
-  XBee xbee = XBee();
+  XBee xbee;
   ZBRxResponse responseObj = ZBRxResponse();
 
   ZBTxRequest requestObj;
@@ -61,7 +62,7 @@ class ContainerCommunicationModule {
   void (*setLatestSimulationPressureValue)(int pressureVal);
   void (*setContainerSimulationMode)(int newSimulationMode);
 
-  void init();
+  void init(XBee xbeeDevice);
 
   void setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength);
 

@@ -27,6 +27,9 @@
 #define GPS_RX_PIN 4
 #define GPS_TX_PIN 5
 
+#define XBEE_RX_PIN 2
+#define XBEE_TX_PIN 3
+
 //Enums
 #define STATE_STARTUP 0
 #define STATE_PRE_DEPLOY 1
@@ -88,9 +91,11 @@ DS3231 rtc;
 TinyGPSPlus gps;
 Adafruit_BMP280 bmp;
 Servo servo;
+XBee xbee = XBee();
 
 // The serial connection to the GPS device
 SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
+SoftwareSerial xbeeSerial(XBEE_RX_PIN, XBEE_TX_PIN);
 
 //State variables
 bool sendTelemetry = false;
@@ -165,9 +170,12 @@ time_t getActualUnix(uint8_t yy, uint8_t mm, uint8_t dd, uint8_t hh, uint8_t mi,
 }
 
 void setup() {
+  Serial.begin(9600);
   Wire.begin();
 
   gpsSerial.begin(9600);
+  xbeeSerial.begin(9600);
+  xbee.setSerial(xbeeSerial);
 
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                 Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
@@ -192,7 +200,7 @@ void setup() {
   communicationModule.setContainerTelemetryActivated = &setContainerTelemetryActivated;
   communicationModule.setContainerSimulationMode = &setContainerSimulationMode;
   communicationModule.setLatestSimulationPressureValue = &setLatestSimulationPressureValue;
-  communicationModule.init();
+  communicationModule.init(xbee);
   currentSec = rtc.getSecond();
 
   //If there was no state saved in EEPROM, currentState will equal STATE_STARTUP

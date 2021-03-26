@@ -1,11 +1,8 @@
 #include "ContainerCommunicationModule.h"
 
-void ContainerCommunicationModule::init() {
+void ContainerCommunicationModule::init(XBee xbeeDevice) {
   // Start the serial port
-  Serial.begin(9600);
-  // Tell XBee to use Hardware Serial. It's also possible to use SoftwareSerial
-  xbee.setSerial(Serial);
-
+  xbee = xbeeDevice;
 }
 
 void ContainerCommunicationModule::setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength) {
