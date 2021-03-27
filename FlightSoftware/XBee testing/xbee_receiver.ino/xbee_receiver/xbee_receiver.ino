@@ -9,11 +9,11 @@ ZBRxResponse responseObj = ZBRxResponse();
 ZBTxRequest requestObj;
 ZBTxStatusResponse requestStatusObj = ZBTxStatusResponse();
 
-uint8_t GROUND_NET_ID[1] {0xACC}; // 2764
-uint8_t PAYLOADS_NET_ID[1] {0xAD1}; // 2769
+uint8_t GROUND_NET_ID[2] {0x27, 0x69}; // 2764
+uint8_t PAYLOADS_NET_ID[4] {'2', '7', '6', '9'}; // 2769
 uint8_t ID_CMD[2] {'I','D'};
 AtCommandRequest atCommandRequest = AtCommandRequest(ID_CMD, GROUND_NET_ID, sizeof(GROUND_NET_ID));
-AtCommandResponse atCommandResponse = AtCommandResponse();
+AtCommandResponse atResponse = AtCommandResponse();
 
 // Specify the address of the remote XBee (this is the SH + SL)
 XBeeAddress64 payload1Address = XBeeAddress64(0x0, 0x403e0f30);
@@ -27,10 +27,13 @@ void setup() {
   // Tell XBee to use Hardware Serial. It's also possible to use SoftwareSerial
   xbee.setSerial(XbeeSerial);
 
+  switchToNetId(GROUND_NET_ID);
+
 }
 
 void loop() {
-  if (receivePackets() == ZB_RX_RESPONSE) { //We received  telemetry
+  int pack = receivePackets();
+  if (pack == ZB_RX_RESPONSE) { //We received  telemetry
     uint8_t* packetData = responseObj.getData();
     uint8_t dataLength = responseObj.getDataLength();
     parseReceivedPacket(packetData, dataLength);
@@ -39,6 +42,32 @@ void loop() {
     } else {
       //console.log('ST command package received but sender didnt get an ack');
     }
+  } else if (pack == AT_COMMAND_RESPONSE) {
+    if (atResponse.isOk()) {
+        Serial.print("Command [");
+        Serial.print(atResponse.getCommand()[0]);
+        Serial.print(atResponse.getCommand()[1]);
+        Serial.println("] was successful!");
+
+        if (atResponse.getValueLength() > 0) {
+          Serial.print("Command value length is ");
+          Serial.println(atResponse.getValueLength(), DEC);
+
+          Serial.print("Command value: ");
+          
+          for (int i = 0; i < atResponse.getValueLength(); i++) {
+            Serial.print(atResponse.getValue()[i], HEX);
+            Serial.print(" ");
+          }
+
+          Serial.println("");
+        }
+      } 
+      else {
+        Serial.print("Command return error code: ");
+        Serial.println(atResponse.getStatus(), HEX);
+      }
+  } else {
   }
 
 }
@@ -67,7 +96,7 @@ int receivePackets() {
       //   // We sould resend the package
       // }
     } else if (xbee.getResponse().getApiId() == AT_COMMAND_RESPONSE) {
-      xbee.getResponse().getAtCommandResponse(atCommandResponse);
+      xbee.getResponse().getAtCommandResponse(atResponse);
       return AT_COMMAND_RESPONSE;
     }
   } else if (xbee.getResponse().isError()) {
