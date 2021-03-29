@@ -7,8 +7,14 @@ body {
 .column {
   display: flex;
   flex-direction: column;
+  flex-grow: 1;
 }
 
 .telemetry-overview {
-  background: black;
+  background: white;
+}
+
+.telemetry-overview-status-bar {
+  display: flex;
+  flex-direction: row;
 }

@@ -5,12 +5,50 @@ const chartjs = require('chart.js');
 const CONTAINER_TELEMETRY_CHART_CONFIG = {
   type: 'line',
   data: {
-    labels: [],
+    labels: ['00:01:02', '00:01:03', '00:01:04', '00:01:05' ,'00:01:06', '00:01:07', '00:01:08', '00:01:09', '00:01:10'],
     datasets: [{
-      label: 'Altitude',
+      label: 'Container',
+      backgroundColor: 'rgb(92,94,93)', //Gray
+      borderColor: 'rgb(92,94,93)', //Gray
+      data: [700,
+        673,
+        640,
+        605,
+        560,
+        520,
+        480,
+        430,
+        380],
+      fill: false,
+    },
+    {
+      label: 'Payload 1',
       backgroundColor: 'rgb(255, 99, 132)', //Red
       borderColor: 'rgb(255, 99, 132)', //Red
-      data: [],
+      data: [null,
+        null,
+        null,
+        null,
+        null,
+        500,
+        450,
+        415,
+        375],
+      fill: false,
+    },
+    {
+      label: 'Payload 2',
+      backgroundColor: 'rgb(54, 162, 235)', //Blue
+      borderColor: 'rgb(54, 162, 235)', //Blue
+      data: [null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        400,
+        350],
       fill: false,
     }]
   },
@@ -19,7 +57,7 @@ const CONTAINER_TELEMETRY_CHART_CONFIG = {
     mantainAspectRation: false,
     title: {
       display: true,
-      text: 'Evolution'
+      text: 'Container'
     },
     tooltips: {
       mode: 'index',
@@ -34,19 +72,73 @@ const CONTAINER_TELEMETRY_CHART_CONFIG = {
         display: true,
         scaleLabel: {
           display: true,
-          labelString: 'Mission Time (s)'
+          labelString: 'Mission Time (hh/mm/ss)'
         }
       }],
       yAxes: [{
         display: true,
         scaleLabel: {
           display: true,
-          labelString: 'Altitude (s)'
+          labelString: 'Altitude (m)'
         }
       }]
     }
   }
 };
+
+// const CONTAINER_TELEMETRY_CHART_CONFIG = {
+//   type: 'line',
+//   data: {
+//     labels: ['00:01:02', '00:01:03', '00:01:04', '00:01:05' ,'00:01:06', '00:01:07', '00:01:08', '00:01:09', '00:01:10'],
+//     datasets: [{
+//       label: 'Container',
+//       backgroundColor: 'rgb(92,94,93)', //Gray
+//       borderColor: 'rgb(92,94,93)', //Gray
+//       data: [15.2,
+//         16.2,
+//         16.3,
+//         16.8,
+//         17.5,
+//         17.8,
+//         18.3,
+//         18.4,
+//         18.6],
+//       fill: false,
+//     }]
+//   },
+//   options: {
+//     responsive: true,
+//     mantainAspectRation: false,
+//     title: {
+//       display: true,
+//       text: 'Container'
+//     },
+//     tooltips: {
+//       mode: 'index',
+//       intersect: false,
+//     },
+//     hover: {
+//       mode: 'nearest',
+//       intersect: true
+//     },
+//     scales: {
+//       xAxes: [{
+//         display: true,
+//         scaleLabel: {
+//           display: true,
+//           labelString: 'Mission Time (hh/mm/ss)'
+//         }
+//       }],
+//       yAxes: [{
+//         display: true,
+//         scaleLabel: {
+//           display: true,
+//           labelString: 'Temerature (°C)'
+//         }
+//       }]
+//     }
+//   }
+// };
 
 // class OverviewTelemetryCharts {
   var containerTelemetryChart;
@@ -68,22 +160,24 @@ const CONTAINER_TELEMETRY_CHART_CONFIG = {
     payload2TelemetryCanvasCtx = document.getElementById('payload-2-telemetry-canvas').getContext('2d');
     payload2TelemetryChart = new chartjs.Chart(payload2TelemetryCanvasCtx, payload2TelemetryChartConfig);
     console.log(containerTelemetryChartConfig.data.datasets[0]);
-    fs.createReadStream('data/simulation_data.csv')
-    .pipe(csv())
-    .on('data', (row) => {
-      addValueToContainerTelemetryChart(Number(row.pressure_val));
-    })
-    .on('end', () => {
-      console.log('CSV file successfully processed');
-    });
+    // fs.createReadStream('data/simulation_data.csv')
+    // .pipe(csv())
+    // .on('data', (row) => {
+    //   addValueToContainerTelemetryChart(Number(row.pressure_val));
+    // })
+    // .on('end', () => {
+    //   console.log('CSV file successfully processed');
+    // });
   // }
 
   function addValueToContainerTelemetryChart(value) {
-    console.log(containerTelemetryChartConfig.data.datasets[0]);
     containerTelemetryChartConfig.data.datasets[0].data.push(value);
-    console.log(value);
-    console.log(containerTelemetryChartConfig.data.datasets[0].data);
-
+    if (!containerTelemetryChartConfig.data.labels.length) {
+      containerTelemetryChartConfig.data.labels.push('0');
+    } else {
+      let lastNum = Number(lastElem(containerTelemetryChartConfig.data.labels));
+      containerTelemetryChartConfig.data.labels.push(String(lastNum + 1));
+    }
   }
 // }
 
@@ -126,3 +220,7 @@ const CONTAINER_TELEMETRY_CHART_CONFIG = {
 // csvWriter
 //   .writeRecords(data)
 //   .then(()=> console.log('The CSV file was written successfully'));
+
+function lastElem(array) {
+  return array[array.length - 1];
+}
