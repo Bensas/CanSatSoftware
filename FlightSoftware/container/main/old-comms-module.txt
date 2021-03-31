@@ -1,0 +1,53 @@
+ORDERED:
+
+Container module:
+-Receive payload 1 telemetry data (before 250ms) - 
+-Send Payload 1 commands (before 250ms) -
+-Receive payload 2 telemetry data (before 500ms)
+-Send Payload 2 commands (before 500ms)
+-Send payload 1 telemetry data (after 500ms)
+-Send payload 2 telemetry data (after 500ms)
+-Receive Ground commands (after 500ms)
+-Send own telemetry data (after 500ms)
+
+Payload 1 module:
+-Receive container commands(before 250ms) -
+-Send telemetry data (before 250ms) -
+
+Payload 2 module:
+-Receive container commands(before 500ms)
+-Send telemetry data (before 500ms)
+
+Ground module:
+-Receive teemetry packages (after 500ms)
+-Send commands (after 500ms)
+-Send pressure data (after 500ms)
+
+OVERALL:
+
+Before 250ms:
+-Container sends Payload 1 commands
+-Payload 1 sends telemetry data
+-Container receives Payload 1 telemetry data
+-Payload 1 receives container commands
+
+Before 500ms:
+-Container sends Payload 2 commands
+-Payload 2 sends telemetry data
+-Container receives Payload 2 telemetry data
+-Payload 2 receives container commands
+
+After 500ms:
+-Container sends own telemetry data
+-Ground receives teemetry packages
+-Ground send commands
+-Container receives Ground commands
+
+-Ground sends pressure data
+-Container received pressure data
+-Container sends payload 1 telemetry data
+-Ground receives p1 telemetry data
+
+-Container sends payload 2 telemetry data
+-Ground receives p2 telemetry data
+
