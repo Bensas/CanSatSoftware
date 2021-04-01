@@ -13,6 +13,7 @@ function createWindow () {
 }
 
 app.whenReady().then(createWindow)
+app.allowRendererProcessReuse = false
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
