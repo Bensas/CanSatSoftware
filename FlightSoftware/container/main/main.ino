@@ -2,7 +2,6 @@
 #include "ElectromechanicalModule.h"
 #include <stdint.h>
 #include <stdio.h>
-#include <time.h>
 #include <Wire.h>
 #include <EEPROM.h>
 #include <DS3231.h>
@@ -53,9 +52,15 @@
 #define TEAM_ID 2764
 
 // Types
+
+struct mission_time_t {
+  uint8_t hours;
+  uint8_t minutes;
+  uint8_t seconds;
+};
 struct ContainerTelemetryPackage {
     uint16_t teamID; // 2 bytes
-    time_t missionTime; // 1 sec reslution
+    mission_time_t missionTime; // 1 sec reslution
     uint16_t packetCount;
     uint8_t packetType[2]; // 1 byte
     bool mode; // 1 byte TRUE = F, FALSE = S
@@ -64,7 +69,7 @@ struct ContainerTelemetryPackage {
     float altitude;
     float temp;
     float voltage;
-    time_t gpsTime; // 1 sec reslution
+    mission_time_t gpsTime; // 1 sec reslution
     double gpsLat;
     double gpsLong; //8 bytes
     float gpsAltitude; //4 bytes
@@ -77,7 +82,7 @@ struct ContainerTelemetryPackage {
 
 struct PayloadTelemetryPackage {
     uint16_t teamID; // 2 bytes
-    time_t missionTime; // 1 sec reslution
+    mission_time_t missionTime; // 1 sec reslution
     uint16_t packetCount;
     uint8_t packetType[2]; 
     float spAltitude;
@@ -104,8 +109,8 @@ uint8_t simulationMode = SIMULATION_DISABLED;
 uint16_t packageCount = 0;
 uint16_t sp1PackageCount = 0;
 uint16_t sp2PackageCount = 0;
-time_t sp1DeployTime = 0;
-time_t sp2DeployTime = 0;
+mission_time_t sp1DeployTime = {};
+mission_time_t sp2DeployTime = {};
 
 float latestSimulationPressureValue = 0;
 
@@ -131,7 +136,7 @@ void setContainerSimulationMode(uint8_t newSimulationMode) {
   simulationMode = newSimulationMode;
 }
 
-void setRTCTime(time_t time) {
+void setRTCTime(mission_time_t time) {
   
 }
 
@@ -146,10 +151,9 @@ float readAltitude(float seaLevelhPa, float currentPa) {
   return altitude;
 }
 
-struct ContainerTelemetryPackage createTelemetryPackage(float altitude, float temp, float voltage, time_t gpsTime, double gpsLat, double gpsLong, float gpsAltitude, uint8_t gpsSats) {
-  struct ContainerTelemetryPackage ret = {TEAM_ID, getActualUnix(rtc.getYear(), rtc.getMonth(CENTURY), 
-                                          rtc.getDate(), rtc.getHour(H12, PM), rtc.getMinute(), 
-                                          rtc.getSecond()), packageCount, "C\0", 
+ContainerTelemetryPackage createTelemetryPackage(float altitude, float temp, float voltage, mission_time_t gpsTime, double gpsLat, double gpsLong, float gpsAltitude, uint8_t gpsSats) {
+  ContainerTelemetryPackage ret = {TEAM_ID, getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(),rtc.getSecond()),
+                                          packageCount, "C\0", 
                                           simulationMode != SIMULATION_ACTIVATED, 
                                           currentState >= STATE_PAYLOAD_1_DEPLOY, currentState >= STATE_PAYLOAD_2_DEPLOY,
                                           altitude, temp, voltage, gpsTime, gpsLat, gpsLong, gpsAltitude, gpsSats, 
@@ -157,21 +161,18 @@ struct ContainerTelemetryPackage createTelemetryPackage(float altitude, float te
   return ret;
 }
 
-struct PayloadTelemetryPackage createPayloadTelemetryPackage(uint16_t packetCount, uint8_t packetType[2], float spAltitude, float spTemp, float spRotationRate) {
-  struct PayloadTelemetryPackage ret = {TEAM_ID, getActualUnix(rtc.getYear(), rtc.getMonth(CENTURY), rtc.getDate(), rtc.getHour(H12, PM), 
-                                        rtc.getMinute(), rtc.getSecond()), packetCount, packetType, spAltitude, spTemp, spRotationRate};
+PayloadTelemetryPackage createPayloadTelemetryPackage(uint16_t packetCount, uint8_t packetType[2], float spAltitude, float spTemp, float spRotationRate) {
+  PayloadTelemetryPackage ret = {TEAM_ID, getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond()), packetCount, packetType, spAltitude, spTemp, spRotationRate};
   return ret;
 }
 
-time_t getActualUnix(uint8_t yy, uint8_t mm, uint8_t dd, uint8_t hh, uint8_t mi, uint8_t ss){
-  struct tm breakdown;
-  breakdown.tm_year = yy - 1900; /* years since 1900 */
-  breakdown.tm_mon = mm - 1;
-  breakdown.tm_mday = dd;
-  breakdown.tm_hour = hh;
-  breakdown.tm_min = mi;
-  breakdown.tm_sec = ss;
-  return mktime(&breakdown);
+mission_time_t getMissionTime(uint8_t hh, uint8_t mi, uint8_t ss){
+  struct mission_time_t missionTime = {
+    hh,
+    mi,
+    ss
+  };
+  return missionTime;
 }
 
 void setup() {
@@ -181,8 +182,8 @@ void setup() {
   gpsSerial.begin(9600);
   groundXBeeSerial.begin(9600);
   payloadsXBeeSerial.begin(9600);
-  groundXBee.setSerial(xbeeSerial);
-  payloadsXBee.setSerial(xbeeSerial);
+  groundXBee.setSerial(groundXBeeSerial);
+  payloadsXBee.setSerial(payloadsXBeeSerial);
 
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                 Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
@@ -223,7 +224,7 @@ void setup() {
 
 void loop() {
   uint8_t rtcSeconds = rtc.getSecond();
-  communicationModule.loop(rtcSeconds);
+  communicationModule.loop();
   switch(currentState) {
     case STATE_STARTUP:
       break;
@@ -254,7 +255,7 @@ void loop() {
         
         // me faltaria rotacion, con gps?
         //if (gps.time.isUpdated()) { que pasa si "no esta updated"?
-          time_t gpsTime = getActualUnix(gps.date.year(), gps.date.month(), gps.date.day(), gps.time.hour(), gps.time.minute(), gps.time.second());
+          mission_time_t gpsTime = getMissionTime(gps.time.hour(), gps.time.minute(), gps.time.second());
         //}
         //if (gps.location.isUpdated()) { que pasa si "no esta updated"?
           double lat = gps.location.lat();
@@ -316,19 +317,15 @@ void switchToState(int8_t newState) {
       break;
     case STATE_PAYLOAD_1_DEPLOY:
       electromechanicalModule.movePayload1Servo(180);
-      if (sp1DeployTime == 0) {
-        sp1DeployTime = getActualUnix(rtc.getYear(), rtc.getMonth(CENTURY), 
-                                      rtc.getDate(), rtc.getHour(H12, PM), rtc.getMinute(), 
-                                      rtc.getSecond());
+      if (sp2DeployTime.hours == 0 && sp2DeployTime.minutes == 0 && sp2DeployTime.seconds == 0) {
+        sp1DeployTime = getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond());
         EEPROM.put(SP1_DEPLOY_TIME_EEPROM_ADDR, sp1DeployTime);
       }
       break;
     case STATE_PAYLOAD_2_DEPLOY:
       electromechanicalModule.movePayload2Servo(180);
-      if (sp2DeployTime == 0) {
-        sp2DeployTime = getActualUnix(rtc.getYear(), rtc.getMonth(CENTURY), 
-                                      rtc.getDate(), rtc.getHour(H12, PM), rtc.getMinute(), 
-                                      rtc.getSecond());
+      if (sp2DeployTime.hours == 0 && sp2DeployTime.minutes == 0 && sp2DeployTime.seconds == 0) {
+        sp2DeployTime = getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond());
         EEPROM.put(SP2_DEPLOY_TIME_EEPROM_ADDR, sp2DeployTime);
       }
       break;
