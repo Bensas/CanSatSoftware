@@ -1,88 +1,60 @@
 #include "Queue.h"
+#include "CommunicationModule.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <SoftwareSerial.h>
 #include <DS3231.h>
 #include <XBee.h>
 
+#define STATE_IDLE 0
+#define STATE_WAITING_FOR_GROUND_RESPONSE 1
+#define STATE_WAITING_FOR_PAYLOAD_1_RESPONSE 2
+#define STATE_WAITING_FOR_PAYLOAD_2_RESPONSE 3
+
 #define SIMULATION_DISABLED 0
 #define SIMULATION_ENABLED 1
 #define SIMULATION_ACTIVATED 2
 
-#define STATE_RTC_SETUP -1
-#define STATE_P1_COMMUNICATION 0
-#define STATE_P2_COMMUNICATION 1
-#define STATE_GROUND_COMMUNICATION_1 2
-#define STATE_GROUND_COMMUNICATION_2 3
-#define STATE_GROUND_COMMUNICATION_3 4
-
-// Pin receiving the one-pulse-per-second signal from the RTC.
-// This should be an interrupt-capable pin.
-#define RTC_INTERRUPT_PIN 2;
-
-class ContainerCommunicationModule {
+class ContainerCommunicationModule : CommunicationModule {
   public:
-  uint8_t currentState = STATE_RTC_SETUP;
+    uint8_t lastCommandEcho[10];
 
-  DS3231 rtc;
-  unsigned long secStartMillis = 0;
-  uint8_t currentSec = 0;
+    uint8_t groundCommunicationState = 0;
+    uint8_t payloadCommunicationState = 0;
 
-  bool hasMessage;
-  bool isBusy;
-  uint8_t lastCommandEcho[10];
+    DS3231 rtc;
 
-  uint16_t packageCount;
+    XBee groundXBee;
+    ZBRxResponse groundResponseObj = ZBRxResponse();
+    ZBTxRequest groundRequestObj;
+    ZBTxStatusResponse groundRequestStatusObj = ZBTxStatusResponse();
 
+    XBee payloadsXBee;
+    ZBRxResponse payloadsResponseObj = ZBRxResponse();
+    ZBTxRequest payloadsRequestObj;
+    ZBTxStatusResponse payloadsRequestStatusObj = ZBTxStatusResponse();
 
-  XBee xbee;
-  ZBRxResponse responseObj = ZBRxResponse();
+    PayloadCommandQueue payload1CommandQueue = PayloadCommandQueue();
+    PayloadCommandQueue payload2CommandQueue = PayloadCommandQueue();
+    TelemetryPacketQueue telemetryPacketQueue = TelemetryPacketQueue();
 
-  ZBTxRequest requestObj;
-  ZBTxStatusResponse requestStatusObj = ZBTxStatusResponse();
+    void (*setContainerTelemetryActivated)(bool telemetryActivated);
+    void (*setLatestSimulationPressureValue)(int pressureVal);
+    void (*setContainerSimulationMode)(int newSimulationMode);
 
-  
-  uint8_t GROUND_NET_ID[1] {0xACC}; // 2764
-  uint8_t PAYLOADS_NET_ID[1] {0xAD1}; // 2769
-  uint8_t ID_CMD[2] {'I','D'};
-  AtCommandRequest atCommandRequest = AtCommandRequest(ID_CMD, GROUND_NET_ID, sizeof(GROUND_NET_ID));
-  AtCommandResponse atCommandResponse = AtCommandResponse();
+    void ContainerCommunicationModule::init(XBee groundXBeeDevice, XBee payloadsXBeeDevice, DS3231 RTC);
 
+    void setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength);
+    void parseReceivedPacket(uint8_t* packetData, uint8_t packetLength);
+    void parseCommandPacket(uint8_t* packetData, uint8_t packetLength);
+    void parseTelemetryPacket(uint8_t* packetData, uint8_t packetLength);
 
-  PayloadCommandQueue payload1CommandQueue = PayloadCommandQueue();
-  PayloadCommandQueue payload2CommandQueue = PayloadCommandQueue();
-  TelemetryPacketQueue telemetryPacketQueue = TelemetryPacketQueue();
+    void sendNextPayload1Command();
+    void sendNextPayload2Command();
+    void sendNextTelemetryPacket();
 
-  // Specify the address of the remote XBee (this is the SH + SL)
-  XBeeAddress64 payload1Address = XBeeAddress64(0x0013a200, 0x403e0f30);
-  XBeeAddress64 payload2Address = XBeeAddress64(0x0013a200, 0x403e0f30);
-  XBeeAddress64 groundAddress = XBeeAddress64(0x0013a200, 0x403e0f30);
+    void manageGroundCommunication();
+    void managePayloadsCommunication();
 
-  void (*setContainerTelemetryActivated)(bool telemetryActivated);
-  void (*setLatestSimulationPressureValue)(int pressureVal);
-  void (*setContainerSimulationMode)(int newSimulationMode);
-
-  void init(XBee xbeeDevice);
-
-  void setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength);
-
-  void parseReceivedPacket(uint8_t* packetData, uint8_t packetLength);
-
-  void parseCommandPacket(uint8_t* packetData, uint8_t packetLength);
-  void parseTelemetryPacket(uint8_t* packetData, uint8_t packetLength);
-
-  void switchToNetId(uint8_t netId[]);
-
-  int receivePackets();
-
-  void sendNextPayload1Command();
-
-  void sendNextPayload2Command();
-
-  void sendNextTelemetryPacket();
-  void loop(uint8_t rtcSeconds);
-
-  void switchToState(int8_t newState);
-
-  void manageStateSwitching(uint8_t rtcSeconds);
+    void loop();
 };

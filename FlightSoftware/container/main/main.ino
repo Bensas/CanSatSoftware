@@ -1,15 +1,14 @@
 #include "ContainerCommunicationModule.h"
+#include "ElectromechanicalModule.h"
 #include <stdint.h>
+#include <stdio.h>
 #include <time.h>
-//#include "CommunicationModule.h"
 #include <Wire.h>
 #include <EEPROM.h>
 #include <DS3231.h>
 
 #include <SoftwareSerial.h> 
 #include "TinyGPS++.h"
-
-#include <Servo.h> 
 
 #include <SPI.h>
 #include <Adafruit_BMP280.h>
@@ -20,15 +19,15 @@
 #define BMP_MOSI 11
 #define BMP_CS   10
 
-#define SERVO_PIN 2
-
 #define BEACON_PIN_NUMBER  9//buzzer to arduino pin 9
 
 #define GPS_RX_PIN 4
 #define GPS_TX_PIN 5
 
-#define XBEE_RX_PIN 2
-#define XBEE_TX_PIN 3
+#define GROUND_XBEE_RX_PIN 2
+#define GROUND_XBEE_TX_PIN 3
+#define PAYLOADS_XBEE_RX_PIN 4
+#define PAYLOADS_XBEE_TX_PIN 5
 
 //Enums
 #define STATE_STARTUP 0
@@ -42,14 +41,14 @@
 #define SIMULATION_ACTIVATED 2
 
 //EEPROM Memory addresses
-#define CURRENT_STATE_EEPROM_ADD 0
-#define SEND_TELEMETRY_EEPROM_ADD 1
-#define SIMULATION_MODE_EEPROM_ADD 2
-#define PACKAGE_COUNT_EEPROM_ADD 4
-#define SP1_PCOUNT_EEPROM_ADD 6
-#define SP2_PCOUNT_EEPROM_ADD 8
-#define SP1_DEPLOY_TIME 10
-#define SP2_DEPLOY_TIME 18
+#define CURRENT_STATE_EEPROM_ADDR 0
+#define SEND_TELEMETRY_EEPROM_ADDR 1
+#define SIMULATION_MODE_EEPROM_ADDR 2
+#define PACKAGE_COUNT_EEPROM_ADDR 4
+#define SP1_PCOUNT_EEPROM_ADDR 6
+#define SP2_PCOUNT_EEPROM_ADDR 8
+#define SP1_DEPLOY_TIME_EEPROM_ADDR 10
+#define SP2_DEPLOY_TIME_EEPROM_ADDR 18
 
 #define TEAM_ID 2764
 
@@ -90,20 +89,21 @@ struct PayloadTelemetryPackage {
 DS3231 rtc;
 TinyGPSPlus gps;
 Adafruit_BMP280 bmp;
-Servo servo;
-XBee xbee = XBee();
+XBee groundXBee = XBee();
+XBee payloadsXBee = XBee();
 
 // The serial connection to the GPS device
 SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
-SoftwareSerial xbeeSerial(XBEE_RX_PIN, XBEE_TX_PIN);
+SoftwareSerial groundXBeeSerial(GROUND_XBEE_RX_PIN, GROUND_XBEE_TX_PIN);
+SoftwareSerial payloadsXBeeSerial(PAYLOADS_XBEE_RX_PIN, PAYLOADS_XBEE_TX_PIN);
 
 //State variables
+uint8_t currentState = STATE_STARTUP;
 bool sendTelemetry = false;
 uint8_t simulationMode = SIMULATION_DISABLED;
 uint16_t packageCount = 0;
 uint16_t sp1PackageCount = 0;
 uint16_t sp2PackageCount = 0;
-uint8_t currentState = STATE_STARTUP;
 time_t sp1DeployTime = 0;
 time_t sp2DeployTime = 0;
 
@@ -117,6 +117,7 @@ uint8_t currentSec = 0;
 float bmpBasePressure;
 
 ContainerCommunicationModule communicationModule = ContainerCommunicationModule();
+ElectromechanicalModule electromechanicalModule = ElectromechanicalModule();
 
 void setContainerTelemetryActivated(bool telemetryActivated) {
   sendTelemetry = telemetryActivated;
@@ -128,6 +129,10 @@ void setLatestSimulationPressureValue(int pressureVal) {
 
 void setContainerSimulationMode(uint8_t newSimulationMode) {
   simulationMode = newSimulationMode;
+}
+
+void setRTCTime(time_t time) {
+  
 }
 
 float readAltitude(float seaLevelhPa, float currentPa) {
@@ -174,8 +179,10 @@ void setup() {
   Wire.begin();
 
   gpsSerial.begin(9600);
-  xbeeSerial.begin(9600);
-  xbee.setSerial(xbeeSerial);
+  groundXBeeSerial.begin(9600);
+  payloadsXBeeSerial.begin(9600);
+  groundXBee.setSerial(xbeeSerial);
+  payloadsXBee.setSerial(xbeeSerial);
 
   bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                 Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
@@ -183,24 +190,26 @@ void setup() {
                 Adafruit_BMP280::FILTER_X16,      /* Filtering. */
                 Adafruit_BMP280::STANDBY_MS_500);
   bmpBasePressure = bmp.readPressure();
-  servo.attach(SERVO_PIN); 
 
   pinMode(BEACON_PIN_NUMBER, OUTPUT);
   
   //Retrieve state variables from EEPROM
-  EEPROM.get(SEND_TELEMETRY_EEPROM_ADD, sendTelemetry);
-  EEPROM.get(SIMULATION_MODE_EEPROM_ADD, simulationMode);
-  EEPROM.get(PACKAGE_COUNT_EEPROM_ADD, packageCount);
-  EEPROM.get(SP1_PCOUNT_EEPROM_ADD, sp1PackageCount);
-  EEPROM.get(SP2_PCOUNT_EEPROM_ADD, sp2PackageCount);
-  EEPROM.get(CURRENT_STATE_EEPROM_ADD, currentState);
-  EEPROM.get(SP1_DEPLOY_TIME, sp1DeployTime);
-  EEPROM.get(SP2_DEPLOY_TIME, sp2DeployTime);
+  EEPROM.get(SEND_TELEMETRY_EEPROM_ADDR, sendTelemetry);
+  EEPROM.get(SIMULATION_MODE_EEPROM_ADDR, simulationMode);
+  EEPROM.get(PACKAGE_COUNT_EEPROM_ADDR, packageCount);
+  EEPROM.get(SP1_PCOUNT_EEPROM_ADDR, sp1PackageCount);
+  EEPROM.get(SP2_PCOUNT_EEPROM_ADDR, sp2PackageCount);
+  EEPROM.get(CURRENT_STATE_EEPROM_ADDR, currentState);
+  EEPROM.get(SP1_DEPLOY_TIME_EEPROM_ADDR, sp1DeployTime);
+  EEPROM.get(SP2_DEPLOY_TIME_EEPROM_ADDR, sp2DeployTime);
 
   communicationModule.setContainerTelemetryActivated = &setContainerTelemetryActivated;
   communicationModule.setContainerSimulationMode = &setContainerSimulationMode;
   communicationModule.setLatestSimulationPressureValue = &setLatestSimulationPressureValue;
-  communicationModule.init(xbee);
+  communicationModule.init(groundXBee, payloadsXBee, rtc);
+
+  electromechanicalModule.init();
+
   currentSec = rtc.getSecond();
 
   //If there was no state saved in EEPROM, currentState will equal STATE_STARTUP
@@ -301,26 +310,26 @@ void loop() {
 
 void switchToState(int8_t newState) {
   currentState = newState;
-  EEPROM.put(CURRENT_STATE_EEPROM_ADD, currentState);
+  EEPROM.put(CURRENT_STATE_EEPROM_ADDR, currentState);
   switch(newState) {
     case STATE_PRE_DEPLOY:
       break;
     case STATE_PAYLOAD_1_DEPLOY:
-      servo.write(180); // Cuantos grados?
+      electromechanicalModule.movePayload1Servo(180);
       if (sp1DeployTime == 0) {
         sp1DeployTime = getActualUnix(rtc.getYear(), rtc.getMonth(CENTURY), 
                                       rtc.getDate(), rtc.getHour(H12, PM), rtc.getMinute(), 
                                       rtc.getSecond());
-        EEPROM.put(SP1_DEPLOY_TIME, sp1DeployTime);
+        EEPROM.put(SP1_DEPLOY_TIME_EEPROM_ADDR, sp1DeployTime);
       }
       break;
     case STATE_PAYLOAD_2_DEPLOY:
-      servo.write(180); // Cuantos grados?
+      electromechanicalModule.movePayload2Servo(180);
       if (sp2DeployTime == 0) {
         sp2DeployTime = getActualUnix(rtc.getYear(), rtc.getMonth(CENTURY), 
                                       rtc.getDate(), rtc.getHour(H12, PM), rtc.getMinute(), 
                                       rtc.getSecond());
-        EEPROM.put(SP2_DEPLOY_TIME, sp2DeployTime);
+        EEPROM.put(SP2_DEPLOY_TIME_EEPROM_ADDR, sp2DeployTime);
       }
       break;
     case STATE_LANDED:

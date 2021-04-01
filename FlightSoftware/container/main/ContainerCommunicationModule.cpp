@@ -1,8 +1,10 @@
 #include "ContainerCommunicationModule.h"
 
-void ContainerCommunicationModule::init(XBee xbeeDevice) {
+void ContainerCommunicationModule::init(XBee groundXBeeDevice, XBee payloadsXBeeDevice, DS3231 RTC) {
   // Start the serial port
-  xbee = xbeeDevice;
+  groundXBee = groundXBeeDevice;
+  payloadsXBee = payloadsXBeeDevice;
+  rtc = RTC;
 }
 
 void ContainerCommunicationModule::setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength) {
@@ -90,234 +92,98 @@ void ContainerCommunicationModule::parseTelemetryPacket(uint8_t* packetData, uin
   telemetryPacketQueue.add(packetDataCopy, packetLength);
 }
 
-void ContainerCommunicationModule::switchToNetId(uint8_t netId[]){
-  atCommandRequest.setCommandValue(netId);
-  xbee.send(atCommandRequest);
-}
-
-int ContainerCommunicationModule::receivePackets() {
-  xbee.readPacket();
-  if (xbee.getResponse().isAvailable()) {
-    if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {    
-      xbee.getResponse().getZBRxResponse(responseObj);
-      if (responseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
-        return ZB_RX_RESPONSE;
-      } else {
-        // we got it (obviously) but sender didn't get an ACK
-      }
-    } else if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
-      xbee.getResponse().getZBTxStatusResponse(requestStatusObj);
-      return ZB_TX_STATUS_RESPONSE;
-      // if (txStatus.getDeliveryStatus() == SUCCESS) {
-      //   return ZB_TX_STATUS_RESPONSE;
-      // } else {
-      //   // We sould resend the package
-      // }
-    } else if (xbee.getResponse().getApiId() == AT_COMMAND_RESPONSE) {
-      xbee.getResponse().getAtCommandResponse(atCommandResponse);
-      return AT_COMMAND_RESPONSE;
-    }
-  } else if (xbee.getResponse().isError()) {
-    //console.log("Error reading packet.  Error code: ");  
-    //console.log(xbee.getResponse().getErrorCode());
-  }
-  return false;
-}
-
 void ContainerCommunicationModule::sendNextPayload1Command() {
-  requestObj = ZBTxRequest(payload1Address, payload1CommandQueue.head->data, sizeof(uint8_t));
-  xbee.send(requestObj);
+  payloadsRequestObj = ZBTxRequest(payload1Address, payload1CommandQueue.head->data, sizeof(uint8_t));
+  payloadsXBee.send(payloadsRequestObj);
 }
 
 void ContainerCommunicationModule::sendNextPayload2Command() {
-  requestObj = ZBTxRequest(payload2Address, payload2CommandQueue.head->data, sizeof(uint8_t));
-  xbee.send(requestObj);
+  payloadsRequestObj = ZBTxRequest(payload2Address, payload2CommandQueue.head->data, sizeof(uint8_t));
+  payloadsXBee.send(payloadsRequestObj);
 }
 
 void ContainerCommunicationModule::sendNextTelemetryPacket(){
-  requestObj = ZBTxRequest(groundAddress, telemetryPacketQueue.head->data, telemetryPacketQueue.head->dataLength);
-  xbee.send(requestObj);
+  groundRequestObj = ZBTxRequest(groundAddress, telemetryPacketQueue.head->data, telemetryPacketQueue.head->dataLength);
+  groundXBee.send(groundRequestObj);
 }
 
-void ContainerCommunicationModule::loop(uint8_t rtcSeconds) {
-  if (currentState == STATE_RTC_SETUP) {
-    if (receivePackets() == ZB_RX_RESPONSE) {
-      uint8_t* packetData = responseObj.getData();
-      uint8_t dataLength = responseObj.getDataLength();
-      setRtcTimeFromPacket(packetData, dataLength);
-      if (responseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
-        //console.log('ST command package received and acknowledged');
-      } else {
-        //console.log('ST command package received but sender didnt get an ack');
-      }
-    }
-    return;
-  }
+void ContainerCommunicationModule::loop() {
+  manageGroundCommunication();
+  managePayloadsCommunication();
+}
 
-  manageStateSwitching(rtcSeconds);
-  switch(currentState) {
-    case STATE_P1_COMMUNICATION:
-      if (receivePackets() == ZB_RX_RESPONSE) { //We received  telemetry
-        uint8_t* packetData = responseObj.getData();
-        uint8_t dataLength = responseObj.getDataLength();
-        parseReceivedPacket(packetData, dataLength);
-        if (responseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
-          //console.log('ST command package received and acknowledged');
-        } else {
-          //console.log('ST command package received but sender didnt get an ack');
-        }
-      } else if (receivePackets() == ZB_TX_STATUS_RESPONSE) {
-        //We received an update on a previously sent command
-        if (requestStatusObj.getDeliveryStatus() == SUCCESS) {
-          payload1CommandQueue.removeHead(); //We should ideally verify whether this is actually a payload 1 command (although it would be unlikely for it to be a Payload 2 command)
-        } else {
-          //We didn't get an ack, so we should resend, right?
-          // sendNextPayload1Command();
-        }
-      } else if (receivePackets() == AT_COMMAND_RESPONSE) {
-        if (atCommandResponse.isOk()) {
-          //console.log('Successfully switched to NET ID:');
-        } 
-        else {
-          //console.log('Failed to switch to NET ID:');
-        }
-      }
-      break;
-    case STATE_P2_COMMUNICATION:
-      if (receivePackets() == ZB_RX_RESPONSE) { //We received  telemetry
-        uint8_t* packetData = responseObj.getData();
-        uint8_t dataLength = responseObj.getDataLength();
-        parseReceivedPacket(packetData, dataLength);
-        if (responseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
-          //console.log('ST command package received and acknowledged');
-        } else {
-          //console.log('ST command package received but sender didnt get an ack');
-        }
-      } else if (receivePackets() == ZB_TX_STATUS_RESPONSE) {
-        //We received an update on a previously sent command
-        if (requestStatusObj.getDeliveryStatus() == SUCCESS) {
-          payload2CommandQueue.removeHead(); //We should ideally verify whether this is actually a payload 2 command (although it would be unlikely for it to be a Payload 1 command)
-        } else {
-          //We didn't get an ack, so we should resend, right?
-          // sendNextPayload1Command();
-        }
-      }
-      break;
-    case STATE_GROUND_COMMUNICATION_1:
-      //check own telemetry data ack / resend
-      //receive ground commands
-      if (receivePackets() == ZB_RX_RESPONSE) { //We received  telemetry
-        uint8_t* packetData = responseObj.getData();
-        uint8_t dataLength = responseObj.getDataLength();
-        parseReceivedPacket(packetData, dataLength);
-        if (responseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
-          //console.log('ST command package received and acknowledged');
-        } else {
-          //console.log('ST command package received but sender didnt get an ack');
-        }
-      } else if (receivePackets() == ZB_TX_STATUS_RESPONSE) {
-        //We received an update on a previously sent telemetry packet
-        if (requestStatusObj.getDeliveryStatus() == SUCCESS) {
-          telemetryPacketQueue.removeHead(); 
-        } else {
-          // We didn't get an ack, so we should resend, right?
-          // sendNextTelemetryPacket();
-        }
-      } else if (receivePackets() == AT_COMMAND_RESPONSE) {
-        if (atCommandResponse.isOk()) {
-          //console.log('Successfully switched to NET ID:');
-        } 
-        else {
-          //console.log('Failed to switch to NET ID:');
-        }
-      }
-      break;
-    case STATE_GROUND_COMMUNICATION_2:
-      //check p1 telemetry data ack / resend
-      //receive ground simp data
-      if (receivePackets() == ZB_TX_STATUS_RESPONSE) {
-        //We received an update on a previously sent telemetry packet
-        if (requestStatusObj.getDeliveryStatus() == SUCCESS) {
-          telemetryPacketQueue.removeHead(); 
-        } else {
-          // We didn't get an ack, so we should resend, right?
-          // sendNextTelemetryPacket();
-        }
-      }
-      break;
-    case STATE_GROUND_COMMUNICATION_3:
-      //check p2 telemetry data ack / resend
-      if (receivePackets() == ZB_TX_STATUS_RESPONSE) {
-        //We received an update on a previously sent telemetry packet
-        if (requestStatusObj.getDeliveryStatus() == SUCCESS) {
-          telemetryPacketQueue.removeHead(); 
-        } else {
-          // We didn't get an ack, so we should resend, right?
-          // sendNextTelemetryPacket();
-        }
-      }
-      break;
+void ContainerCommunicationModule::manageGroundCommunication() {
+  int groundReceiveStatus = receivePackets(groundXBee, groundResponseObj, groundRequestStatusObj);
+  if (groundReceiveStatus == ZB_RX_RESPONSE) { // We received a message so we parse it and act on it.
+    uint8_t* packetData = groundResponseObj.getData();
+    uint8_t dataLength = groundResponseObj.getDataLength();
+    parseReceivedPacket(packetData, dataLength);
+    // if (groundResponseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
+    //   //console.log('ST command package received and acknowledged');
+    // } else {
+    //   //console.log('ST command package received but sender didnt get an ack');
+    // }
+  } else if (groundReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
+    if (groundRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
+      telemetryPacketQueue.removeHead(); 
+      groundCommunicationState = STATE_IDLE;
+    } else { //We got a status response but it wasn't an ACK, so we resend the packet
+      sendNextTelemetryPacket();
+    }
+  } else {
+    Serial.println("Container received package of type: ");
+    Serial.println(groundReceiveStatus);
+  }
+  if (groundCommunicationState == STATE_IDLE && !telemetryPacketQueue.isEmpty()) {
+    sendNextTelemetryPacket();
+    groundCommunicationState = STATE_WAITING_FOR_GROUND_RESPONSE;
   }
 }
 
-void ContainerCommunicationModule::switchToState(int8_t newState) {
-  currentState = newState;
-  switch(newState) {
-    case STATE_P1_COMMUNICATION:
-      if (!payload1CommandQueue.isEmpty()) {
-        switchToNetId(PAYLOADS_NET_ID);
-        sendNextPayload1Command();
+void ContainerCommunicationModule::managePayloadsCommunication() {
+  int payloadsReceiveStatus = receivePackets(payloadsXBee, payloadsResponseObj, payloadsRequestStatusObj);
+  if (payloadsReceiveStatus == ZB_RX_RESPONSE) { // We received a message so we parse it and act on it.
+    uint8_t* packetData = payloadsResponseObj.getData();
+    uint8_t dataLength = payloadsResponseObj.getDataLength();
+    parseReceivedPacket(packetData, dataLength);
+    // if (payloadsResponseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
+    //   //console.log('ST command package received and acknowledged');
+    // } else {
+    //   //console.log('ST command package received but sender didnt get an ack');
+    // }
+  } else if (payloadsReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
+    if (payloadsRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
+      switch (payloadCommunicationState) {
+        case STATE_WAITING_FOR_PAYLOAD_1_RESPONSE:
+          payload1CommandQueue.removeHead();
+          break;
+        case STATE_WAITING_FOR_PAYLOAD_2_RESPONSE:
+          payload2CommandQueue.removeHead();
+          break;
       }
-      break;
-    case STATE_P2_COMMUNICATION:
-      if (!payload2CommandQueue.isEmpty()) {
-        sendNextPayload2Command();
+      payloadCommunicationState = STATE_IDLE;
+    } else { //We got a status response but it wasn't an ACK, so we resend the packet
+      switch (payloadCommunicationState) {
+        case STATE_WAITING_FOR_PAYLOAD_1_RESPONSE:
+          sendNextPayload1Command();
+          break;
+        case STATE_WAITING_FOR_PAYLOAD_2_RESPONSE:
+          sendNextPayload2Command();
+          break;
       }
-      break;
-    case STATE_GROUND_COMMUNICATION_1:
-      switchToNetId(GROUND_NET_ID);
-      //Send own telemetry data
-      if (!telemetryPacketQueue.isEmpty()){
-        sendNextTelemetryPacket();
-      }
-      break;
-    case STATE_GROUND_COMMUNICATION_2:
-      //Send p1 telemetry data
-      if (!telemetryPacketQueue.isEmpty()){
-        sendNextTelemetryPacket();
-      }
-      break;
-    case STATE_GROUND_COMMUNICATION_3:
-      //Send p2 telemetry data
-      if (!telemetryPacketQueue.isEmpty()){
-        sendNextTelemetryPacket();
-      }
-      break;
+    }
+  } else {
+    Serial.println("Container received package of type: ");
+    Serial.println(payloadsReceiveStatus);
   }
-}
 
-void ContainerCommunicationModule::manageStateSwitching(uint8_t rtcSeconds) {
-  if (rtcSeconds != currentSec) {
-    switchToState(STATE_P1_COMMUNICATION);
-    currentSec = rtcSeconds;
-    secStartMillis = millis();
-  }
-  else {
-    unsigned long ellapsedMillis = millis() - secStartMillis;
-    if (ellapsedMillis < 250 && currentState != STATE_P1_COMMUNICATION) {
-      switchToState(STATE_P1_COMMUNICATION);
-    }
-    else if (ellapsedMillis < 500 && currentState != STATE_P2_COMMUNICATION) {
-      switchToState(STATE_P2_COMMUNICATION);
-    }
-    else if (ellapsedMillis < 667 && currentState != STATE_GROUND_COMMUNICATION_1) {
-      switchToState(STATE_GROUND_COMMUNICATION_1);
-    }
-    else if (ellapsedMillis < 834 && currentState != STATE_GROUND_COMMUNICATION_2) {
-      switchToState(STATE_GROUND_COMMUNICATION_2);
-    }
-    else if (currentState != STATE_GROUND_COMMUNICATION_3) {
-      switchToState(STATE_GROUND_COMMUNICATION_3);
+  if (payloadCommunicationState == STATE_IDLE) {
+    if (!payload1CommandQueue.isEmpty()){
+      sendNextPayload1Command();
+      payloadCommunicationState = STATE_WAITING_FOR_PAYLOAD_1_RESPONSE;
+    } else {
+      sendNextPayload2Command();
+      payloadCommunicationState = STATE_WAITING_FOR_PAYLOAD_2_RESPONSE;
     }
   }
 }
