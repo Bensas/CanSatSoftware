@@ -19,4 +19,4 @@ class ElectromechanicalModule {
     void movePayload2Servo(uint16_t degrees) {
       servo2.write(degrees);
     }
-}
+};
