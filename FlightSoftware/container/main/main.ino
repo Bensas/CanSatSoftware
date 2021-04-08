@@ -1,5 +1,6 @@
 #include "ContainerCommunicationModule.h"
 #include "ElectromechanicalModule.h"
+#include "SensorModule.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <Wire.h>
@@ -10,13 +11,8 @@
 #include "TinyGPS++.h"
 
 #include <SPI.h>
-#include <Adafruit_BMP280.h>
 
 //External Component pins
-#define BMP_SCK  13
-#define BMP_MISO 12
-#define BMP_MOSI 11
-#define BMP_CS   10
 
 #define BEACON_PIN_NUMBER  9//buzzer to arduino pin 9
 
@@ -93,7 +89,6 @@ struct PayloadTelemetryPackage {
 //External Components
 DS3231 rtc;
 TinyGPSPlus gps;
-Adafruit_BMP280 bmp;
 XBee groundXBee = XBee();
 XBee payloadsXBee = XBee();
 
@@ -118,11 +113,9 @@ float latestSimulationPressureValue = 0;
 bool H12, PM, CENTURY;
 uint8_t currentSec = 0;
 
-//BMP calibratoin
-float bmpBasePressure;
-
 ContainerCommunicationModule communicationModule = ContainerCommunicationModule();
 ElectromechanicalModule electromechanicalModule = ElectromechanicalModule();
+SensorModule sensorModule = SensorModule();
 
 void setContainerTelemetryActivated(bool telemetryActivated) {
   sendTelemetry = telemetryActivated;
@@ -138,17 +131,6 @@ void setContainerSimulationMode(uint8_t newSimulationMode) {
 
 void setRTCTime(mission_time_t time) {
   
-}
-
-float readAltitude(float seaLevelhPa, float currentPa) {
-  float altitude;
-
-  float pressure = currentPa; // in Si units for Pascal
-  pressure /= 100;
-
-  altitude = 44330 * (1.0 - pow(pressure / seaLevelhPa, 0.1903));
-
-  return altitude;
 }
 
 ContainerTelemetryPackage createTelemetryPackage(float altitude, float temp, float voltage, mission_time_t gpsTime, double gpsLat, double gpsLong, float gpsAltitude, uint8_t gpsSats) {
@@ -185,12 +167,7 @@ void setup() {
   groundXBee.setSerial(groundXBeeSerial);
   payloadsXBee.setSerial(payloadsXBeeSerial);
 
-  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-                Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-                Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-                Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-                Adafruit_BMP280::STANDBY_MS_500);
-  bmpBasePressure = bmp.readPressure();
+  sensorModule.init();
 
   pinMode(BEACON_PIN_NUMBER, OUTPUT);
   
@@ -230,11 +207,10 @@ void loop() {
       break;
     case STATE_PRE_DEPLOY:
       //si esto se repite en STATE_PAYLOAD_1_DEPLOY podriamos meterlo en una funcion y llamar eso directamente?
-      float altitude = bmp.readAltitude(bmpBasePressure);
+      float altitude = sensorModule.readAltitude();
       if (sendTelemetry == true && simulationMode != SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
         currentSec = rtcSeconds;
-        float pressure = bmp.readPressure();
-        float altitude = bmp.readAltitude(bmpBasePressure);
+        float altitude = sensorModule.readAltitude();
         float voltage = analogRead(A0) * (5.0 / 1023.0);
 
       }
@@ -246,9 +222,8 @@ void loop() {
       //take all sensor measurements
       if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
         currentSec = rtcSeconds;
-        float temperatureInCelsius = bmp.readTemperature();
-        float pressure = bmp.readPressure();
-        float altitude = bmp.readAltitude(bmpBasePressure);
+        float temperatureInCelsius = sensorModule.readTemperature();
+        float altitude = sensorModule.readAltitude();
         
         int sensorValue = analogRead(A0);
         float voltage = sensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
@@ -279,20 +254,13 @@ void loop() {
     case STATE_PAYLOAD_2_DEPLOY:
       if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
         currentSec = rtcSeconds;
-        float temperatureInCelsius = bmp.readTemperature();
-        float pressure = bmp.readPressure();
-        float altitude = bmp.readAltitude(bmpBasePressure);
+        float temperatureInCelsius = sensorModule.readTemperature();
+        float altitude = sensorModule.readAltitude();
         // me faltaria rotacion, con gps?
         packageCount++; // habria que ver si los recibe?
         // send telemetryPackage to ground
       } else if (simulationMode == SIMULATION_ACTIVATED) {
-        // if (variable de SIMP activada, recibi comando) {
-        //   float temperatureInCelsius = bmp.readTemperature();
-        //   float pressure = valor del SIMP;
-        //   float altitude = readAltitude(bmpBasePressure, pressure);
-        //   packageCount++;
-        //   send telemetryPackage to ground
-        // }
+        float altitude = sensorModule.getAltitudeFromPressure(latestSimulationPressureValue);
       }
      
 //      if (altitude es constante) // guardar una altitud previa y ver delta?
