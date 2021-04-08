@@ -8,16 +8,12 @@
 #include <DS3231.h>
 
 #include <SoftwareSerial.h> 
-#include "TinyGPS++.h"
 
 #include <SPI.h>
 
 //External Component pins
 
 #define BEACON_PIN_NUMBER  9//buzzer to arduino pin 9
-
-#define GPS_RX_PIN 4
-#define GPS_TX_PIN 5
 
 #define GROUND_XBEE_RX_PIN 2
 #define GROUND_XBEE_TX_PIN 3
@@ -47,6 +43,8 @@
 
 #define TEAM_ID 2764
 
+
+String STATE_STRING_ARRAY[] = {"STARTUP", "PRE_DEPLOY", "PAYLOAD1DEPLOY", "PAYLOAD2DEPLOY", "LANDED"};
 // Types
 
 struct mission_time_t {
@@ -54,8 +52,8 @@ struct mission_time_t {
   uint8_t minutes;
   uint8_t seconds;
 };
-struct ContainerTelemetryPackage {
-    uint16_t teamID; // 2 bytes
+struct ContainerTelemetryPacket {
+    uint16_t teamID; // 2 bytes 
     mission_time_t missionTime; // 1 sec reslution
     uint16_t packetCount;
     uint8_t packetType[2]; // 1 byte
@@ -76,7 +74,8 @@ struct ContainerTelemetryPackage {
     uint8_t cmdEcho[8];
 };
 
-struct PayloadTelemetryPackage {
+
+struct PayloadTelemetryPacket {
     uint16_t teamID; // 2 bytes
     mission_time_t missionTime; // 1 sec reslution
     uint16_t packetCount;
@@ -88,12 +87,10 @@ struct PayloadTelemetryPackage {
 
 //External Components
 DS3231 rtc;
-TinyGPSPlus gps;
 XBee groundXBee = XBee();
 XBee payloadsXBee = XBee();
 
 // The serial connection to the GPS device
-SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
 SoftwareSerial groundXBeeSerial(GROUND_XBEE_RX_PIN, GROUND_XBEE_TX_PIN);
 SoftwareSerial payloadsXBeeSerial(PAYLOADS_XBEE_RX_PIN, PAYLOADS_XBEE_TX_PIN);
 
@@ -133,8 +130,8 @@ void setRTCTime(mission_time_t time) {
   
 }
 
-ContainerTelemetryPackage createTelemetryPackage(float altitude, float temp, float voltage, mission_time_t gpsTime, double gpsLat, double gpsLong, float gpsAltitude, uint8_t gpsSats) {
-  ContainerTelemetryPackage ret = {TEAM_ID, getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(),rtc.getSecond()),
+ContainerTelemetryPacket createTelemetryPacket(float altitude, float temp, float voltage, mission_time_t gpsTime, double gpsLat, double gpsLong, float gpsAltitude, uint8_t gpsSats) {
+  ContainerTelemetryPacket ret = {TEAM_ID, getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(),rtc.getSecond()),
                                           packageCount, "C\0", 
                                           simulationMode != SIMULATION_ACTIVATED, 
                                           currentState >= STATE_PAYLOAD_1_DEPLOY, currentState >= STATE_PAYLOAD_2_DEPLOY,
@@ -143,8 +140,72 @@ ContainerTelemetryPackage createTelemetryPackage(float altitude, float temp, flo
   return ret;
 }
 
-PayloadTelemetryPackage createPayloadTelemetryPackage(uint16_t packetCount, uint8_t packetType[2], float spAltitude, float spTemp, float spRotationRate) {
-  PayloadTelemetryPackage ret = {TEAM_ID, getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond()), packetCount, packetType, spAltitude, spTemp, spRotationRate};
+//2764,00:01:32,10,C,F,N,N,700.2,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,0,0,CXON
+String createTelemetryPacketString(float altitude, float temp, float voltage, double gpsLat, double gpsLong, float gpsAltitude, uint8_t gpsSats) {
+  // uint8_t result[90];
+  // string result;
+  // memcpy(result, itoa(TEAM_ID), 4);
+  // result[4] = ',';
+  // memcpy(result + 5, getMissionTimeString(rtc.getHour(H12, PM), rtc.getMinute(),rtc.getSecond()), 8);
+  // result[13] = ',';
+  // uint8_t* packageCountStr = itoa(packageCount);
+  // packageCountPadding =  4 - strlen(packageCountStr);
+  // memcpy(result + 14 + packageCountPadding, packageCountStr, 4);
+  // result[18] = ',';
+  // result[19] = 'C';
+  // result[20] = ',';
+  // result[21] = simulationMode == SIMULATION_ACTIVATED ? 'S' : 'F';
+  // result[22] = ',';
+  // result[23] = currentState >= STATE_PAYLOAD_1_DEPLOY ? 'R' : 'N';
+  // result[24] = ',';
+  // result[25] = currentState >= STATE_PAYLOAD_2_DEPLOY ? 'R' : 'N';
+  // sprintf(result + 26, "%.1f", altitude);
+
+  String result = "";
+  String separator = ",";
+
+  char buffer[12];
+  unsigned char presision = 1, voltagePrecision = 2, latLngPrecision = 5;
+
+  result += itoa(TEAM_ID);
+  result += separator;
+  result += getMissionTimeString(rtc.getHour(H12, PM), rtc.getMinute(),rtc.getSecond());
+  result += separator;
+  result += itoa(packageCount);
+  result += separator + "C" + separator;
+  result += simulationMode == SIMULATION_ACTIVATED ? "S" : "F";
+  result += separator;
+  result += currentState >= STATE_PAYLOAD_1_DEPLOY ? "R" : "N";
+  result += separator;
+  result += currentState >= STATE_PAYLOAD_2_DEPLOY ? "R" : "N";
+  result += dtostrf(altitude, 6, precision, buffer);
+  result += separator;
+  result += dtostrf(temp, 4, precision, buffer);
+  result += separator;
+  result += dtostrf(voltage, 5, voltagePrecision, buffer);
+  result += separator;
+  result += getMissionTimeString(sensorModule.gps.time.hour(), sensorModule.gps.time.minute(),sensorModule.gps.time.second());
+  result += separator;
+  result += dtostrf(gpsLat, 8, latLngPrecision, buffer);
+  result += separator;
+  result += dtostrf(gpsLng, 8, latLngPrecision, buffer);
+  result += separator;
+  result += dtostrf(gpsAltitude, 6, precision, buffer);
+  result += separator;
+  result += itoa(gpsSats);
+  result += separator;
+  result += STATE_STRING_ARRAY[currentState];
+  result += separator;
+  result += itoa(sp1PackageCount);
+  result += separator;
+  result += itoa(sp2PackageCount);
+  result += separator;
+  result += communicationModule.lastCommandEcho;
+  return result;
+}
+
+PayloadTelemetryPacket createPayloadTelemetryPacket(uint16_t packetCount, uint8_t packetType[2], float spAltitude, float spTemp, float spRotationRate) {
+  PayloadTelemetryPacket ret = {TEAM_ID, getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond()), packetCount, packetType, spAltitude, spTemp, spRotationRate};
   return ret;
 }
 
@@ -155,6 +216,16 @@ mission_time_t getMissionTime(uint8_t hh, uint8_t mi, uint8_t ss){
     ss
   };
   return missionTime;
+}
+
+uint8_t* getMissionTimeString(uint8_t hh, uint8_t mi, uint8_t ss) { // Format HH:MM:SS
+  uint8_t result[8];
+  memcpy(result, itoa(hh), 2);
+  result[2] = ':';
+  memcpy(result + 3, itoa(mi), 2);
+  result[5] = ':';
+  memcpy(result + 6, itoa(ss), 2);
+  return result;
 }
 
 void setup() {
@@ -202,6 +273,7 @@ void setup() {
 void loop() {
   uint8_t rtcSeconds = rtc.getSecond();
   communicationModule.loop();
+  sensorModule.loop();
   switch(currentState) {
     case STATE_STARTUP:
       break;
@@ -222,26 +294,21 @@ void loop() {
       //take all sensor measurements
       if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
         currentSec = rtcSeconds;
-        float temperatureInCelsius = sensorModule.readTemperature();
+        float temperature = sensorModule.readTemperature();
         float altitude = sensorModule.readAltitude();
         
-        int sensorValue = analogRead(A0);
-        float voltage = sensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+        int voltageSensorValue = analogRead(A0);
+        float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
         
-        // me faltaria rotacion, con gps?
-        //if (gps.time.isUpdated()) { que pasa si "no esta updated"?
-          mission_time_t gpsTime = getMissionTime(gps.time.hour(), gps.time.minute(), gps.time.second());
-        //}
-        //if (gps.location.isUpdated()) { que pasa si "no esta updated"?
-          double lat = gps.location.lat();
-          double lng = gps.location.lng();
-        //}
-        //if (gps.altitude.isUpdated()) que pasa si "no esta updated"?
-          double altitudeMeters = gps.altitude.meters();
-        //if (gps.satellites.isUpdated()) que pasa si "no esta updated"?
-          uint32_t satelites = gps.satellites.value(); // Number of satellites in use (u32)
+        double gpsLat = sensorModule.gps.location.lat();
+        double gpsLng = sensorModule.gps.location.lng();
+        double gpsAltitude = sensorModule.gps.altitude.meters();
+        uint32_t gpsSatellites = sensorModule.gps.satellites.value();
 
-        // send telemetryPackage to ground
+        communicationModule.telemetryPacketQueue.add(createTelemetryPacketString())
+
+        communicationModule.stringifyAndEnqueueTelemetryPacketToGround(createTelemetryPacketString(altitude, temperature, voltage, gpsLat, gpsLng, gpsAltitude, gpsSatellites));
+
       } else if (simulationMode == SIMULATION_ACTIVATED) {
         
       }

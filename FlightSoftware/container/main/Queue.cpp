@@ -30,10 +30,10 @@ bool PayloadCommandQueue::isEmpty(){
 }
 
 //Container tlemetry example 2764,00:01:32,10,C,F,N,N,700.2,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,0,0,CXON
-void TelemetryPacketQueue::add(uint8_t nextCommand[], uint8_t nextCommandLength) {
+void TelemetryPacketQueue::add(uint8_t nextPacket[], uint8_t nextPacketLength) {
   TelemetryPacketQueueNode *tmp = new TelemetryPacketQueueNode;
-  tmp->data = nextCommand;
-  tmp->dataLength = nextCommandLength;
+  tmp->data = nextPacket;
+  tmp->dataLength = nextPacketLength;
   tmp->next = NULL;
   if(head == NULL)
   {

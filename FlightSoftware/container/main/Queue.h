@@ -29,7 +29,7 @@ class TelemetryPacketQueue {
   TelemetryPacketQueueNode* tail;
   uint8_t length = 0;
 
-  void add(uint8_t nextCommand[], uint8_t nextCommandLength);
+  void add(uint8_t nextPacket[], uint8_t nextPacketLength);
   void removeHead();
   bool isEmpty();
 };
