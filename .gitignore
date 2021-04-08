@@ -1,0 +1,13 @@
+
+*.pak
+*.dll
+*.exe
+GroundModule/dist/GroundModule Setup 1.0.0.exe.blockmap
+GroundModule/dist/win-unpacked/icudtl.dat
+GroundModule/dist/win-unpacked/LICENSE.electron.txt
+GroundModule/dist/win-unpacked/LICENSES.chromium.html
+GroundModule/dist/win-unpacked/resources/app.asar
+*.bin
+GroundModule/dist/win-unpacked/vk_swiftshader_icd.json
+GroundModule/dist/builder-effective-config.yaml
+GroundModule/dist/builder-debug.yml

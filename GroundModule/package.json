@@ -11,14 +11,18 @@
   "keywords": [],
   "license": "ISC",
   "devDependencies": {
-    "electron": "^11.1.1"
+    "electron": "^11.4.1",
+    "electron-builder": "^22.10.5",
+    "electron-rebuild": "^2.3.5"
   },
   "dependencies": {
     "chart.js": "^2.9.4",
     "csv-parser": "^3.0.0",
     "csv-writer": "^1.6.0",
-    "electron-builder": "^22.10.5",
     "serialport": "^9.0.7",
     "xbee-api": "^0.6.0"
+  },
+  "build": {
+    "npmRebuild": false
   }
 }
