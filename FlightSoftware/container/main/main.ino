@@ -7,10 +7,6 @@
 #include <EEPROM.h>
 #include <DS3231.h>
 
-#include <SoftwareSerial.h> 
-
-#include <SPI.h>
-
 //External Component pins
 
 #define BEACON_PIN_NUMBER  9//buzzer to arduino pin 9
@@ -44,7 +40,13 @@
 #define TEAM_ID 2764
 
 
-String STATE_STRING_ARRAY[] = {"STARTUP", "PRE_DEPLOY", "PAYLOAD1DEPLOY", "PAYLOAD2DEPLOY", "LANDED"};
+uint8_t startupStr[10] = {'_', 'S', 'T', 'A', 'R', 'T', 'U', 'P', '_', '_'};
+uint8_t predeploStr[10] = {'P', 'R', 'E', '_', 'D', 'E', 'P', 'L', 'O', 'Y'};
+uint8_t p1DeployedStr[10] = {'P', '1', 'D', 'E', 'P', 'L', 'O', 'Y', 'E', 'D'};
+uint8_t p2DeployedStr[10] = {'P', '2', 'D', 'E', 'P', 'L', 'O', 'Y', 'E', 'D'};
+uint8_t landedStr[10] = {'_', '_', 'L', 'A', 'N', 'D', 'E', 'D', '_', '_'};
+
+uint8_t* STATE_STRING_ARRAY[5] = {startupStr, predeploStr, p1DeployedStr, p2DeployedStr, landedStr};
 // Types
 
 struct mission_time_t {
@@ -143,7 +145,7 @@ ContainerTelemetryPacket createTelemetryPacket(float altitude, float temp, float
 }
 
 //2764,00:01:32,10,C,F,N,N,700.2,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,0,0,CXON
-void createTelemetryPacketStr(float altitude, float temp, float voltage, double gpsLat, double gpsLng, float gpsAltitude, uint8_t gpsSats) {
+uint8_t* createTelemetryPacketStr(float altitude, float temp, float voltage, double gpsLat, double gpsLng, float gpsAltitude, uint8_t gpsSats) {
    
    uint8_t buffer[12];
    unsigned char precision = 1, voltagePrecision = 2, latLngPrecision = 5, bufferPadding;
@@ -192,9 +194,10 @@ void createTelemetryPacketStr(float altitude, float temp, float voltage, double 
    bufferPadding =  4 - strlen(buffer);
    memcpy(telPacketString + 96 + bufferPadding, buffer, strlen(buffer));
    telPacketString[107] = ',';
-   memcpy(telPacketString + 108, lastCmdEcho, 10);
+   memcpy(telPacketString + 108, communicationModule.lastCommandEcho, 10);
    telPacketString[128] = 0;
    Serial.write(telPacketString, 128);
+   return telPacketString;
 }
 
 PayloadTelemetryPacket createPayloadTelemetryPacket(uint16_t packetCount, uint8_t packetType[2], float spAltitude, float spTemp, float spRotationRate) {
@@ -213,9 +216,9 @@ mission_time_t getMissionTime(uint8_t hh, uint8_t mi, uint8_t ss){
 
 uint8_t* getMissionTimeString(uint8_t hh, uint8_t mi, uint8_t ss) { // Format HH:MM:SS
   itoa(hh, missionTimeStringBuffer, 10);
-  result[2] = ':';
+  missionTimeStringBuffer[2] = ':';
   itoa(mi, missionTimeStringBuffer + 3, 10);
-  result[5] = ':';
+  missionTimeStringBuffer[5] = ':';
   itoa(ss, missionTimeStringBuffer + 6, 10);
   return missionTimeStringBuffer;
 }
@@ -224,7 +227,6 @@ void setup() {
   Serial.begin(9600);
   Wire.begin();
 
-  gpsSerial.begin(9600);
   groundXBeeSerial.begin(9600);
   payloadsXBeeSerial.begin(9600);
   groundXBee.setSerial(groundXBeeSerial);
@@ -297,9 +299,7 @@ void loop() {
         double gpsAltitude = sensorModule.gps.altitude.meters();
         uint32_t gpsSatellites = sensorModule.gps.satellites.value();
 
-        communicationModule.telemetryPacketQueue.add(createTelemetryPacketString())
-
-        communicationModule.stringifyAndEnqueueTelemetryPacketToGround(createTelemetryPacketString(altitude, temperature, voltage, gpsLat, gpsLng, gpsAltitude, gpsSatellites));
+        communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, gpsLat, gpsLng, gpsAltitude, gpsSatellites), 128);
 
       } else if (simulationMode == SIMULATION_ACTIVATED) {
         
