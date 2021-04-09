@@ -141,37 +141,18 @@ ContainerTelemetryPacket createTelemetryPacket(float altitude, float temp, float
 }
 
 //2764,00:01:32,10,C,F,N,N,700.2,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,0,0,CXON
-String createTelemetryPacketString(float altitude, float temp, float voltage, double gpsLat, double gpsLong, float gpsAltitude, uint8_t gpsSats) {
-  // uint8_t result[90];
-  // string result;
-  // memcpy(result, itoa(TEAM_ID), 4);
-  // result[4] = ',';
-  // memcpy(result + 5, getMissionTimeString(rtc.getHour(H12, PM), rtc.getMinute(),rtc.getSecond()), 8);
-  // result[13] = ',';
-  // uint8_t* packageCountStr = itoa(packageCount);
-  // packageCountPadding =  4 - strlen(packageCountStr);
-  // memcpy(result + 14 + packageCountPadding, packageCountStr, 4);
-  // result[18] = ',';
-  // result[19] = 'C';
-  // result[20] = ',';
-  // result[21] = simulationMode == SIMULATION_ACTIVATED ? 'S' : 'F';
-  // result[22] = ',';
-  // result[23] = currentState >= STATE_PAYLOAD_1_DEPLOY ? 'R' : 'N';
-  // result[24] = ',';
-  // result[25] = currentState >= STATE_PAYLOAD_2_DEPLOY ? 'R' : 'N';
-  // sprintf(result + 26, "%.1f", altitude);
-
+String createTelemetryPacketString(float altitude, float temp, float voltage, double gpsLat, double gpsLng, float gpsAltitude, uint8_t gpsSats) {
   String result = "";
   String separator = ",";
 
   char buffer[12];
-  unsigned char presision = 1, voltagePrecision = 2, latLngPrecision = 5;
+  unsigned char precision = 1, voltagePrecision = 2, latLngPrecision = 5;
 
-  result += itoa(TEAM_ID);
+  result += itoa(TEAM_ID, buffer, 10);
   result += separator;
   result += getMissionTimeString(rtc.getHour(H12, PM), rtc.getMinute(),rtc.getSecond());
   result += separator;
-  result += itoa(packageCount);
+  result += itoa(packageCount, buffer, 10);
   result += separator + "C" + separator;
   result += simulationMode == SIMULATION_ACTIVATED ? "S" : "F";
   result += separator;
@@ -192,13 +173,13 @@ String createTelemetryPacketString(float altitude, float temp, float voltage, do
   result += separator;
   result += dtostrf(gpsAltitude, 6, precision, buffer);
   result += separator;
-  result += itoa(gpsSats);
+  result += itoa(gpsSats, buffer, 10);
   result += separator;
   result += STATE_STRING_ARRAY[currentState];
   result += separator;
-  result += itoa(sp1PackageCount);
+  result += itoa(sp1PackageCount, buffer, 10);
   result += separator;
-  result += itoa(sp2PackageCount);
+  result += itoa(sp2PackageCount, buffer, 10);
   result += separator;
   result += communicationModule.lastCommandEcho;
   return result;
@@ -220,11 +201,11 @@ mission_time_t getMissionTime(uint8_t hh, uint8_t mi, uint8_t ss){
 
 uint8_t* getMissionTimeString(uint8_t hh, uint8_t mi, uint8_t ss) { // Format HH:MM:SS
   uint8_t result[8];
-  memcpy(result, itoa(hh), 2);
+  itoa(hh, result, 10);
   result[2] = ':';
-  memcpy(result + 3, itoa(mi), 2);
+  itoa(mi, result + 3, 10);
   result[5] = ':';
-  memcpy(result + 6, itoa(ss), 2);
+  itoa(ss, result + 6, 10);
   return result;
 }
 
