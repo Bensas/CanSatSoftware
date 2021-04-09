@@ -1,5 +1,8 @@
 #include "SensorModule.h"
 
+Adafruit_BMP280 bmp280(BMP_CS, BMP_SDI, BMP_SDO,  BMP_SCK);
+SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
+
 void SensorModule::init() {
   // BMP280 SETUP
   if (!bmp280.begin()) {

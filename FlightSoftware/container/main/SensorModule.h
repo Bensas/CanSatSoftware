@@ -14,9 +14,6 @@
 #define GPS_TX 51
 #define GPS_BAUD_RATE 9600
 
-Adafruit_BMP280 bmp280(BMP_CS, BMP_SDI, BMP_SDO,  BMP_SCK);
-SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
-
 class SensorModule {
   public:
   float bmpBasePressure;
