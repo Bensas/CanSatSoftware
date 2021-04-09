@@ -103,6 +103,8 @@ uint16_t sp1PackageCount = 0;
 uint16_t sp2PackageCount = 0;
 mission_time_t sp1DeployTime = {};
 mission_time_t sp2DeployTime = {};
+uint8_t telPacketString[128];
+uint8_t missionTimeStringBuffer[8];
 
 float latestSimulationPressureValue = 0;
 
@@ -141,48 +143,58 @@ ContainerTelemetryPacket createTelemetryPacket(float altitude, float temp, float
 }
 
 //2764,00:01:32,10,C,F,N,N,700.2,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,0,0,CXON
-String createTelemetryPacketString(float altitude, float temp, float voltage, double gpsLat, double gpsLng, float gpsAltitude, uint8_t gpsSats) {
-  String result = "";
-  String separator = ",";
-
-  char buffer[12];
-  unsigned char precision = 1, voltagePrecision = 2, latLngPrecision = 5;
-
-  result += itoa(TEAM_ID, buffer, 10);
-  result += separator;
-  result += getMissionTimeString(rtc.getHour(H12, PM), rtc.getMinute(),rtc.getSecond());
-  result += separator;
-  result += itoa(packageCount, buffer, 10);
-  result += separator + "C" + separator;
-  result += simulationMode == SIMULATION_ACTIVATED ? "S" : "F";
-  result += separator;
-  result += currentState >= STATE_PAYLOAD_1_DEPLOY ? "R" : "N";
-  result += separator;
-  result += currentState >= STATE_PAYLOAD_2_DEPLOY ? "R" : "N";
-  result += dtostrf(altitude, 6, precision, buffer);
-  result += separator;
-  result += dtostrf(temp, 4, precision, buffer);
-  result += separator;
-  result += dtostrf(voltage, 5, voltagePrecision, buffer);
-  result += separator;
-  result += getMissionTimeString(sensorModule.gps.time.hour(), sensorModule.gps.time.minute(),sensorModule.gps.time.second());
-  result += separator;
-  result += dtostrf(gpsLat, 8, latLngPrecision, buffer);
-  result += separator;
-  result += dtostrf(gpsLng, 8, latLngPrecision, buffer);
-  result += separator;
-  result += dtostrf(gpsAltitude, 6, precision, buffer);
-  result += separator;
-  result += itoa(gpsSats, buffer, 10);
-  result += separator;
-  result += STATE_STRING_ARRAY[currentState];
-  result += separator;
-  result += itoa(sp1PackageCount, buffer, 10);
-  result += separator;
-  result += itoa(sp2PackageCount, buffer, 10);
-  result += separator;
-  result += communicationModule.lastCommandEcho;
-  return result;
+void createTelemetryPacketStr(float altitude, float temp, float voltage, double gpsLat, double gpsLng, float gpsAltitude, uint8_t gpsSats) {
+   
+   uint8_t buffer[12];
+   unsigned char precision = 1, voltagePrecision = 2, latLngPrecision = 5, bufferPadding;
+   
+   itoa(TEAM_ID, telPacketString, 10);
+   telPacketString[4] = ',';
+   memcpy(telPacketString + 5, getMissionTimeString(12, 2, 3), 8);
+   telPacketString[13] = ',';
+   itoa(100, buffer, 10);
+   bufferPadding =  4 - strlen(buffer);
+   memcpy(telPacketString + 14 + bufferPadding, buffer, strlen(buffer));
+   telPacketString[18] = ',';
+   telPacketString[19] = 'C';
+   telPacketString[20] = ',';
+   telPacketString[21] = simulationMode == SIMULATION_ACTIVATED ? 'S' : 'F';
+   telPacketString[22] = ',';
+   telPacketString[23] = currentState >= STATE_PAYLOAD_1_DEPLOY ? 'R' : 'N';
+   telPacketString[24] = ',';
+   telPacketString[25] = currentState >= STATE_PAYLOAD_2_DEPLOY ? 'R' : 'N';
+   telPacketString[26] = ',';
+   dtostrf(altitude, 6, precision, telPacketString + 27);
+   telPacketString[33] = ',';
+   dtostrf(temp, 4, precision, telPacketString + 34);
+   telPacketString[38] = ',';
+   dtostrf(voltage, 5, voltagePrecision, telPacketString + 39);
+   telPacketString[40] = ',';
+   memcpy(telPacketString + 41, getMissionTimeString(11, 3, 23), 8);
+   telPacketString[49] = ',';
+   dtostrf(gpsLat, 8, latLngPrecision, telPacketString + 50);
+   telPacketString[58] = ',';
+   dtostrf(gpsLng, 8, latLngPrecision, telPacketString + 59);
+   telPacketString[67] = ',';
+   dtostrf(gpsAltitude, 6, precision, telPacketString + 68);
+   telPacketString[74] = ',';
+   itoa(gpsSats, buffer, 10);
+   bufferPadding =  4 - strlen(buffer);
+   memcpy(telPacketString + 75 + bufferPadding, buffer, strlen(buffer));
+   telPacketString[79] = ',';
+   memcpy(telPacketString + 80, STATE_STRING_ARRAY[currentState], 10);
+   telPacketString[90] = ',';
+   itoa(1280, buffer, 10); //sp1PacketCount
+   bufferPadding =  4 - strlen(buffer);
+   memcpy(telPacketString + 91 + bufferPadding, buffer, strlen(buffer));
+   telPacketString[95] = ',';
+   itoa(69, buffer, 10); //sp2PacketCount
+   bufferPadding =  4 - strlen(buffer);
+   memcpy(telPacketString + 96 + bufferPadding, buffer, strlen(buffer));
+   telPacketString[107] = ',';
+   memcpy(telPacketString + 108, lastCmdEcho, 10);
+   telPacketString[128] = 0;
+   Serial.write(telPacketString, 128);
 }
 
 PayloadTelemetryPacket createPayloadTelemetryPacket(uint16_t packetCount, uint8_t packetType[2], float spAltitude, float spTemp, float spRotationRate) {
@@ -200,13 +212,12 @@ mission_time_t getMissionTime(uint8_t hh, uint8_t mi, uint8_t ss){
 }
 
 uint8_t* getMissionTimeString(uint8_t hh, uint8_t mi, uint8_t ss) { // Format HH:MM:SS
-  uint8_t result[8];
-  itoa(hh, result, 10);
+  itoa(hh, missionTimeStringBuffer, 10);
   result[2] = ':';
-  itoa(mi, result + 3, 10);
+  itoa(mi, missionTimeStringBuffer + 3, 10);
   result[5] = ':';
-  itoa(ss, result + 6, 10);
-  return result;
+  itoa(ss, missionTimeStringBuffer + 6, 10);
+  return missionTimeStringBuffer;
 }
 
 void setup() {
