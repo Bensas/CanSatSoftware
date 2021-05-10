@@ -42,7 +42,7 @@ class ContainerCommunicationModule : CommunicationModule {
     void (*setLatestSimulationPressureValue)(int pressureVal);
     void (*setContainerSimulationMode)(int newSimulationMode);
 
-    void ContainerCommunicationModule::init(XBee groundXBeeDevice, XBee payloadsXBeeDevice, DS3231 RTC);
+    void ContainerCommunicationModule::init(XBee& groundXBeeDevice, XBee& payloadsXBeeDevice, DS3231& RTC);
 
     void setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength);
     void parseReceivedPacket(uint8_t* packetData, uint8_t packetLength);

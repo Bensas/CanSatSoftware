@@ -21,7 +21,7 @@ class PayloadCommunicationModule : CommunicationModule {
 
     void (*setPayloadTelemetryActivated)(bool telemetryActivated);
 
-    void init(XBee xbeeDevice);
+    void init(XBee& xbeeDevice);
 
     void parseReceivedPacket(uint8_t* packetData, uint8_t packetLength);
     void parseCommandPacket(uint8_t* packetData, uint8_t packetLength);

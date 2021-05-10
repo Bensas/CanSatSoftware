@@ -1,10 +1,11 @@
 #include "ContainerCommunicationModule.h"
 
-void ContainerCommunicationModule::init(XBee groundXBeeDevice, XBee payloadsXBeeDevice, DS3231 RTC) {
+void ContainerCommunicationModule::init(XBee& groundXBeeDevice, XBee& payloadsXBeeDevice, DS3231& RTC) {
   // Start the serial port
   groundXBee = groundXBeeDevice;
   payloadsXBee = payloadsXBeeDevice;
   rtc = RTC;
+  Serial.begin(19200);
 }
 
 void ContainerCommunicationModule::setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength) {
@@ -27,6 +28,7 @@ void ContainerCommunicationModule::setRtcTimeFromPacket(uint8_t* packetData, uin
 }
 
 void ContainerCommunicationModule::parseReceivedPacket(uint8_t* packetData, uint8_t packetLength) {
+  Serial.write("Parsing received packet");
   if (packetData[0] == 'C') {
     parseCommandPacket(packetData, packetLength);
   } else {
@@ -44,17 +46,21 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
     CMD,1000,SIMP,101325 provides a simulated pressure reading to the Container (101325 Pascals = approximately sea level). Note: this command is to be used only in simulation mode.
   */
   if (packetData[9] == 'C') { //CX command
+    Serial.write("Telemetry activated");
     setContainerTelemetryActivated(packetData[12] == 'O' && packetData[13] == 'N');
   }
   else if (packetData[9] == 'S' && packetData[10] == 'I') { //SIM or SIMP command
     if (packetData[12] == ',') { //SIM command
       if (packetData[13] =='D') {
+        Serial.write("SIMULATION DIASBLED");
         setContainerSimulationMode(SIMULATION_DISABLED);
       }
       else if (packetData[13] =='E') {
+        Serial.write("SIMULATION ENABLED");
         setContainerSimulationMode(SIMULATION_ENABLED);
       }
       else {
+        Serial.write("SIMULATION ACTIVATED");
         setContainerSimulationMode(SIMULATION_ACTIVATED);
       }
     } else { //SIMP command
@@ -63,6 +69,7 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
       for (i = 14; i < packetLength; i++) {
         pressureValueBuffer[i-14] = packetData[i];
       }
+      Serial.write("SIMP Command");
       pressureValueBuffer[i] = 0;
       setLatestSimulationPressureValue(atoi(pressureValueBuffer));
     }
@@ -70,14 +77,18 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
   else if (packetData[9] == 'S' && packetData[10] == 'P') { //SP1X or SP2X command
     if (packetData[14] == 'O' && packetData[15] == 'N'){
       if (packetData[11] == '1') {
+        Serial.write("p1 command ");
         payload1CommandQueue.add('1');
       } else {
+                Serial.write("p2 command ");
         payload2CommandQueue.add('1');
       }
     } else {
       if (packetData[11] == '1') {
+                Serial.write("p1 command ");
         payload1CommandQueue.add('0');
       } else {
+                Serial.write("p2 command ");
         payload2CommandQueue.add('0');
       }
     }
@@ -109,7 +120,7 @@ void ContainerCommunicationModule::sendNextTelemetryPacket(){
 
 void ContainerCommunicationModule::loop() {
   manageGroundCommunication();
-  managePayloadsCommunication();
+//  managePayloadsCommunication();
 }
 
 void ContainerCommunicationModule::manageGroundCommunication() {
@@ -118,11 +129,11 @@ void ContainerCommunicationModule::manageGroundCommunication() {
     uint8_t* packetData = groundResponseObj.getData();
     uint8_t dataLength = groundResponseObj.getDataLength();
     parseReceivedPacket(packetData, dataLength);
-    // if (groundResponseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
-    //   //console.log('ST command package received and acknowledged');
-    // } else {
-    //   //console.log('ST command package received but sender didnt get an ack');
-    // }
+     if (groundResponseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
+       //console.log('ST command package received and acknowledged');
+     } else {
+       //console.log('ST command package received but sender didnt get an ack');
+     }
   } else if (groundReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (groundRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
       telemetryPacketQueue.removeHead(); 
@@ -131,10 +142,12 @@ void ContainerCommunicationModule::manageGroundCommunication() {
       sendNextTelemetryPacket();
     }
   } else {
-    Serial.println("Container received package of type: ");
-    Serial.println(groundReceiveStatus);
+//    Serial.write("Container received package of type: ");
+//    Serial.write(groundReceiveStatus);
+//      Serial.write("No response");
   }
   if (groundCommunicationState == STATE_IDLE && !telemetryPacketQueue.isEmpty()) {
+    Serial.write("Sending ");
     sendNextTelemetryPacket();
     groundCommunicationState = STATE_WAITING_FOR_GROUND_RESPONSE;
   }
@@ -173,8 +186,8 @@ void ContainerCommunicationModule::managePayloadsCommunication() {
       }
     }
   } else {
-    Serial.println("Container received package of type: ");
-    Serial.println(payloadsReceiveStatus);
+//    Serial.write("Container received package of type: ");
+//    Serial.write(payloadsReceiveStatus);
   }
 
   if (payloadCommunicationState == STATE_IDLE) {
