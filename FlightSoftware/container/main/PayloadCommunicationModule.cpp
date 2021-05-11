@@ -1,6 +1,6 @@
 #include "PayloadCommunicationModule.h"
 
-void PayloadCommunicationModule::init(XBee xbeeDevice) {
+void PayloadCommunicationModule::init(XBee& xbeeDevice) {
   xbee = xbeeDevice;
 }
 
@@ -46,8 +46,8 @@ void PayloadCommunicationModule::loop() {
       sendNextTelemetryPacket();
     }
   } else {
-    Serial.println("Container received package of type: ");
-    Serial.println(containerReceiveStatus);
+    Serial.write("Container received package of type: ");
+    Serial.write(containerReceiveStatus);
   }
   if (containerCommunicationState == STATE_IDLE && !telemetryPacketQueue.isEmpty()) {
     sendNextTelemetryPacket();

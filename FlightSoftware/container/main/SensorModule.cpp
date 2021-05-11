@@ -6,8 +6,8 @@ SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
 void SensorModule::init() {
   // BMP280 SETUP
   if (!bmp280.begin()) {
-    Serial.println(F("Could not find a valid BMP280 sensor, check wiring!"));
-    while (1);
+    Serial.write("Could not find a valid BMP280 sensor, check wiring!");
+//    while (1);
   }
   bmp280.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
             Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */

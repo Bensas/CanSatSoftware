@@ -27,7 +27,7 @@ void setup() {
   // Tell XBee to use Hardware Serial. It's also possible to use SoftwareSerial
   xbee.setSerial(XbeeSerial);
 
-  switchToNetId(GROUND_NET_ID);
+//  switchToNetId(GROUND_NET_ID);
 
 }
 
@@ -73,8 +73,8 @@ void loop() {
 }
 
 void switchToNetId(uint8_t netId[]){
-  atCommandRequest.setCommandValue(netId);
-  xbee.send(atCommandRequest);
+//  atCommandRequest.setCommandValue(netId);
+//  xbee.send(atCommandRequest);
 }
 
 int receivePackets() {

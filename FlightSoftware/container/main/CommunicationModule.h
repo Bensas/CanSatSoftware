@@ -11,5 +11,5 @@ class CommunicationModule {
     XBeeAddress64 groundAddress = XBeeAddress64(0x0013a200, 0x403e0f30);
     XBeeAddress64 containerAddress = XBeeAddress64(0x0013a200, 0x403e0f30);
 
-    int receivePackets(XBee xbee, ZBRxResponse responseObj, ZBTxStatusResponse requestStatusObj);
+    int receivePackets(XBee& xbee, ZBRxResponse& responseObj, ZBTxStatusResponse& requestStatusObj);
 };

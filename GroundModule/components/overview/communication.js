@@ -3,13 +3,15 @@ var xbee_api = require('xbee-api');
 
 var C = xbee_api.constants;
 
-const CONTAINER_MAC_ADDRESS = '0013A2004191B826';
+const GROUND_MAC_ADDRESS = '0013A2004191B826';
+const CONTAINER_MAC_ADDRESS = '0013A2004191C55C';
+
 
 var xbeeAPI = new xbee_api.XBeeAPI({
   api_mode: 2
 });
 
-var serialport = new SerialPort("COM3", {
+var serialport = new SerialPort("COM5", {
   baudRate: 9600,
   parser: ()=>console.log('Heeey mona')
 });
@@ -33,6 +35,7 @@ serialport.on("open", function() {
 
 // Switches the port into "flowing mode"
 serialport.on('data', function (data) {
+  xbeeAPI.rawParser()
   console.log('Data:', data)
 })
 
