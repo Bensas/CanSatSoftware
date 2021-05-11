@@ -39,7 +39,7 @@ class ContainerCommunicationModule : CommunicationModule {
     TelemetryPacketQueue telemetryPacketQueue = TelemetryPacketQueue();
 
     void (*setContainerTelemetryActivated)(bool telemetryActivated);
-    void (*setLatestSimulationPressureValue)(int pressureVal);
+    void (*setLatestSimulationPressureValue)(float pressureVal);
     void (*setContainerSimulationMode)(int newSimulationMode);
 
     void ContainerCommunicationModule::init(XBee& groundXBeeDevice, XBee& payloadsXBeeDevice, DS3231& RTC);

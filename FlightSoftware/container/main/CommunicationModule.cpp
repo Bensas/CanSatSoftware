@@ -3,10 +3,10 @@
 int CommunicationModule::receivePackets(XBee& xbee, ZBRxResponse& responseObj, ZBTxStatusResponse& requestStatusObj) {
   xbee.readPacket();
   if (xbee.getResponse().isAvailable()) {
-    Serial.write("Got XBEE Response:");
+//    Serial.write("Got XBEE Response:\n");
     if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {    
       xbee.getResponse().getZBRxResponse(responseObj);
-      Serial.write("ZB_RX_RESPONSE");
+//      Serial.write("ZB_RX_RESPONSE\n");
       if (responseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
         return ZB_RX_RESPONSE;
       } else {  
@@ -25,7 +25,7 @@ int CommunicationModule::receivePackets(XBee& xbee, ZBRxResponse& responseObj, Z
 //    Serial.write("Error reading packet.  Error code: ");  
 //    Serial.write(xbee.getResponse().getErrorCode());
   } else {
-    Serial.write("No response from XBEE :(");
+//    Serial.write("No response from XBEE :(\n");
   }
     
  

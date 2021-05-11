@@ -89,10 +89,12 @@ SensorModule sensorModule = SensorModule();
 
 void setContainerTelemetryActivated(bool telemetryActivated) {
   sendTelemetry = telemetryActivated;
+//  Serial.println(sendTelemetry);
 }
 
-void setLatestSimulationPressureValue(int pressureVal) {
+void setLatestSimulationPressureValue(float pressureVal) {
   latestSimulationPressureValue = pressureVal;
+//  Serial.println(latestSimulationPressureValue);
 }
 
 void setContainerSimulationMode(uint8_t newSimulationMode) {

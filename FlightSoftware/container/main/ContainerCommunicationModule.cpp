@@ -28,7 +28,9 @@ void ContainerCommunicationModule::setRtcTimeFromPacket(uint8_t* packetData, uin
 }
 
 void ContainerCommunicationModule::parseReceivedPacket(uint8_t* packetData, uint8_t packetLength) {
-  Serial.write("Parsing received packet");
+  Serial.write("Parsing received packet:");
+  Serial.write(packetData, packetLength);
+  Serial.write("\n");
   if (packetData[0] == 'C') {
     parseCommandPacket(packetData, packetLength);
   } else {
@@ -46,21 +48,24 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
     CMD,1000,SIMP,101325 provides a simulated pressure reading to the Container (101325 Pascals = approximately sea level). Note: this command is to be used only in simulation mode.
   */
   if (packetData[9] == 'C') { //CX command
-    Serial.write("Telemetry activated");
+    if (packetData[12] == 'O' && packetData[13] == 'N')
+      Serial.write("Telemetry activated\n");
+    else
+      Serial.write("Telemetry deactivated\n");
     setContainerTelemetryActivated(packetData[12] == 'O' && packetData[13] == 'N');
   }
   else if (packetData[9] == 'S' && packetData[10] == 'I') { //SIM or SIMP command
     if (packetData[12] == ',') { //SIM command
       if (packetData[13] =='D') {
-        Serial.write("SIMULATION DIASBLED");
+        Serial.write("SIMULATION DIASBLED\n");
         setContainerSimulationMode(SIMULATION_DISABLED);
       }
       else if (packetData[13] =='E') {
-        Serial.write("SIMULATION ENABLED");
+        Serial.write("SIMULATION ENABLED\n");
         setContainerSimulationMode(SIMULATION_ENABLED);
       }
       else {
-        Serial.write("SIMULATION ACTIVATED");
+        Serial.write("SIMULATION ACTIVATED\n");
         setContainerSimulationMode(SIMULATION_ACTIVATED);
       }
     } else { //SIMP command
@@ -69,26 +74,26 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
       for (i = 14; i < packetLength; i++) {
         pressureValueBuffer[i-14] = packetData[i];
       }
-      Serial.write("SIMP Command");
+      Serial.write("SIMP Command\n");
       pressureValueBuffer[i] = 0;
-      setLatestSimulationPressureValue(atoi(pressureValueBuffer));
+      setLatestSimulationPressureValue(atof(pressureValueBuffer));
     }
   }
   else if (packetData[9] == 'S' && packetData[10] == 'P') { //SP1X or SP2X command
     if (packetData[14] == 'O' && packetData[15] == 'N'){
       if (packetData[11] == '1') {
-        Serial.write("p1 command ");
+        Serial.write("p1 command \n");
         payload1CommandQueue.add('1');
       } else {
-                Serial.write("p2 command ");
+                Serial.write("p2 command \n");
         payload2CommandQueue.add('1');
       }
     } else {
       if (packetData[11] == '1') {
-                Serial.write("p1 command ");
+                Serial.write("p1 command \n");
         payload1CommandQueue.add('0');
       } else {
-                Serial.write("p2 command ");
+                Serial.write("p2 command \n");
         payload2CommandQueue.add('0');
       }
     }
