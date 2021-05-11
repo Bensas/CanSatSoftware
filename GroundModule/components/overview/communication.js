@@ -39,16 +39,22 @@ serialport.on('data', function (data) {
 // Pipe the data into another stream (like a parser or standard out)
 const lineStream = serialport.pipe(new Readline())
 
-function sendCommand() {
+function sendCommand(cmdData) {
   var frame = {
     type: C.FRAME_TYPE.ZIGBEE_TRANSMIT_REQUEST,
     destination64: CONTAINER_MAC_ADDRESS,
-    data: 'CMD,2764,CX,ON'
+    data: cmdData
   };
   serialport.write(xbeeAPI.buildFrame(frame), function(err, res) {
     if (err) throw(err);
     else     console.log(res);
   });
+}
+
+function sendContainerSetTimeCommand(){
+  const date = new Date();
+  const utcTimeStr = date.toUTCString().split(" ")[4];
+  sendCommand('CMD,ST,' + utcTimeStr);
 }
 
 
