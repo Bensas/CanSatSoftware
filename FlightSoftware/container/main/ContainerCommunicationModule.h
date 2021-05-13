@@ -17,7 +17,7 @@
 
 class ContainerCommunicationModule : CommunicationModule {
   public:
-    uint8_t lastCommandEcho[10];
+    uint8_t lastCommandEcho[24];
 
     uint8_t groundCommunicationState = 0;
     uint8_t payloadCommunicationState = 0;

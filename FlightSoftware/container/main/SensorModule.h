@@ -1,6 +1,6 @@
 #include <SPI.h>
-#include <Adafruit_BMP280.h>
-#include "TinyGPS++.h"
+//#include <Adafruit_BMP280.h>
+//#include "TinyGPS++.h"
 #include <SoftwareSerial.h>
 
 // BMP280 pins
@@ -17,7 +17,7 @@
 class SensorModule {
   public:
   float bmpBasePressure;
-  TinyGPSPlus gps;
+//  TinyGPSPlus gps;
   
   void init();
   void loop();

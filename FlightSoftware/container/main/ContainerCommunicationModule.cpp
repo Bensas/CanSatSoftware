@@ -47,6 +47,7 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
     CMD,2764,SP1X,ON will trigger the Container to relay a command to theScience Payload 1 to begin telemetry transmissions.
     CMD,1000,SIMP,101325 provides a simulated pressure reading to the Container (101325 Pascals = approximately sea level). Note: this command is to be used only in simulation mode.
   */
+  Serial.write("commandPacket");
   if (packetData[9] == 'C') { //CX command
     if (packetData[12] == 'O' && packetData[13] == 'N')
       Serial.write("Telemetry activated\n");
@@ -98,8 +99,12 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
       }
     }
   }
-  memcpy(lastCommandEcho, packetData, packetLength);
-  lastCommandEcho[packetLength] = 0;
+  uint8_t j = 0;
+  for (uint8_t i=0; i < packetLength;i++){ 
+    if (packetData[i] != ',') lastCommandEcho[j++] = packetData[i];
+  }
+  lastCommandEcho[j] = 0;
+  Serial.write(lastCommandEcho, j);
 }
 
 void ContainerCommunicationModule::parseTelemetryPacket(uint8_t* packetData, uint8_t packetLength) {
@@ -119,6 +124,8 @@ void ContainerCommunicationModule::sendNextPayload2Command() {
 }
 
 void ContainerCommunicationModule::sendNextTelemetryPacket(){
+  Serial.write(telemetryPacketQueue.head->data, telemetryPacketQueue.head->dataLength);
+  Serial.write('\n');
   groundRequestObj = ZBTxRequest(groundAddress, telemetryPacketQueue.head->data, telemetryPacketQueue.head->dataLength);
   groundXBee.send(groundRequestObj);
 }
@@ -141,7 +148,8 @@ void ContainerCommunicationModule::manageGroundCommunication() {
      }
   } else if (groundReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (groundRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
-      telemetryPacketQueue.removeHead(); 
+      telemetryPacketQueue.removeHead();
+      Serial.println("Ack biatch");
       groundCommunicationState = STATE_IDLE;
     } else { //We got a status response but it wasn't an ACK, so we resend the packet
       sendNextTelemetryPacket();

@@ -73,7 +73,7 @@ uint16_t sp1PackageCount = 0;
 uint16_t sp2PackageCount = 0;
 mission_time_t sp1DeployTime = {};
 mission_time_t sp2DeployTime = {};
-uint8_t telPacketString[128];
+uint8_t telPacketString[146];
 uint8_t missionTimeStringBuffer[8];
 
 float latestSimulationPressureValue = 0;
@@ -156,11 +156,14 @@ uint8_t* createTelemetryPacketStr(float altitude, float temp, float voltage, dou
    bufferPadding =  4 - strlen(buffer);
    memcpy(telPacketString + 96 + bufferPadding, buffer, strlen(buffer));
    telPacketString[107] = ',';
-   memcpy(telPacketString + 108, communicationModule.lastCommandEcho, 10);
-   telPacketString[128] = 0;
-   Serial.write(telPacketString, 128);
+   uint8_t i = 0;
+   while (communicationModule.lastCommandEcho[i] != 0) telPacketString[108+i] = communicationModule.lastCommandEcho[i++];
+   telPacketString[108+i+1] = 0;
    return telPacketString;
 }
+//CMD2764CXON0
+//           i
+//CMD2764cxon0
 
 mission_time_t getMissionTime(uint8_t hh, uint8_t mi, uint8_t ss){
   struct mission_time_t missionTime = {
@@ -172,11 +175,26 @@ mission_time_t getMissionTime(uint8_t hh, uint8_t mi, uint8_t ss){
 }
 
 uint8_t* getMissionTimeString(uint8_t hh, uint8_t mi, uint8_t ss) { // Format HH:MM:SS
-  itoa(hh, missionTimeStringBuffer, 10);
+  if (hh >= 10){
+    itoa(hh, missionTimeStringBuffer, 10);
+  } else {
+    missionTimeStringBuffer[0] = '0';
+    itoa(hh, missionTimeStringBuffer+1, 10);
+  }
   missionTimeStringBuffer[2] = ':';
-  itoa(mi, missionTimeStringBuffer + 3, 10);
+  if (mi >= 10){
+    itoa(mi, missionTimeStringBuffer+3, 10);
+  } else {
+    missionTimeStringBuffer[3] = '0';
+    itoa(mi, missionTimeStringBuffer+4, 10);
+  }
   missionTimeStringBuffer[5] = ':';
-  itoa(ss, missionTimeStringBuffer + 6, 10);
+  if (ss >= 10){
+    itoa(ss, missionTimeStringBuffer+6, 10);
+  } else {
+    missionTimeStringBuffer[6] = '0';
+    itoa(ss, missionTimeStringBuffer+7, 10);
+  }
   return missionTimeStringBuffer;
 }
 
@@ -210,93 +228,106 @@ void setup() {
 
   electromechanicalModule.init();
 
-  currentSec = rtc.getSecond();
+  currentSec = seconds();
   lastMilis = millis();
 
   //If there was no state saved in EEPROM, currentState will equal STATE_STARTUP
-  if(currentState == STATE_STARTUP) {
+  if(currentState == STATE_STARTUP || currentState == 255) {
+    Serial.write("Startup...");
     switchToState(STATE_PRE_DEPLOY);
   } 
   else {
+    Serial.write('0' + currentState);
     switchToState(currentState);
   }
 }
 
+uint16_t seconds(){
+  return millis() / 1000;
+}
+
 void loop() {
-  uint8_t rtcSeconds = rtc.getSecond();
+  uint8_t rtcSeconds = seconds();
   unsigned long currMillis = millis();
   if (currMillis - lastMilis > 500) {
     communicationModule.loop();
     lastMilis = currMillis;
   }
   
-//  sensorModule.loop();
-//  switch(currentState) {
-//    case STATE_STARTUP:
-//      break;
-//    case STATE_PRE_DEPLOY:
-//      //si esto se repite en STATE_PAYLOAD_1_DEPLOY podriamos meterlo en una funcion y llamar eso directamente?
-//      float altitude = sensorModule.readAltitude();
-//      if (sendTelemetry == true && simulationMode != SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
-//        currentSec = rtcSeconds;
-//        float altitude = sensorModule.readAltitude();
-//        float voltage = analogRead(A0) * (5.0 / 1023.0);
-//
-//      }
-//      if (altitude < 500) {
-//        switchToState(STATE_PAYLOAD_1_DEPLOY);
-//      }
-//      break;
-//    case STATE_PAYLOAD_1_DEPLOY:
-//      //take all sensor measurements
-//      if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
-//        currentSec = rtcSeconds;
-//        float temperature = sensorModule.readTemperature();
-//        float altitude = sensorModule.readAltitude();
-//        
-//        int voltageSensorValue = analogRead(A0);
-//        float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-//        
+  sensorModule.loop();
+  switch(currentState) {
+    case STATE_STARTUP:
+      break;
+    case STATE_PRE_DEPLOY:
+      //si esto se repite en STATE_PAYLOAD_1_DEPLOY podriamos meterlo en una funcion y llamar eso directamente?
+      float altitude = 700;
+      if (sendTelemetry == true && simulationMode != SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
+                currentSec = rtcSeconds;
+        float temperature = sensorModule.readTemperature();
+        int voltageSensorValue = analogRead(A0);
+        float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
 //        double gpsLat = sensorModule.gps.location.lat();
 //        double gpsLng = sensorModule.gps.location.lng();
 //        double gpsAltitude = sensorModule.gps.altitude.meters();
 //        uint32_t gpsSatellites = sensorModule.gps.satellites.value();
-//
-//        communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, gpsLat, gpsLng, gpsAltitude, gpsSatellites), 128);
-//
-//      } else if (simulationMode == SIMULATION_ACTIVATED) {
-//        
-//      }
-//     
-//      if (altitude < 400)
-//        switchToState(STATE_PAYLOAD_2_DEPLOY);
-//
-//      break;
-//      
-//    case STATE_PAYLOAD_2_DEPLOY:
-//      if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
-//        currentSec = rtcSeconds;
-//        float temperatureInCelsius = sensorModule.readTemperature();
-//        float altitude = sensorModule.readAltitude();
-//        // me faltaria rotacion, con gps?
-//        packageCount++; // habria que ver si los recibe?
-//        // send telemetryPackage to ground
-//      } else if (simulationMode == SIMULATION_ACTIVATED) {
-//        float altitude = sensorModule.getAltitudeFromPressure(latestSimulationPressureValue);
-//      }
-//     
-////      if (altitude es constante) // guardar una altitud previa y ver delta?
-//        switchToState(STATE_LANDED);
-//  
-//      break;
-//      
-//    case STATE_LANDED:
-//      //tone(buzzer, 1000); // Send 1KHz sound signal...
-//      //delay(1000);        // Habria que hacer esto?
-//      //noTone(buzzer);     // Los delays son malos, no se como deberia sonar el buzzer, si es constante usamos lo del setup, sino hacemos con millis algo.
-//      
-//      break;
-//  }
+
+        communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, 7567.5, 867556.665, 704, 4), 146);
+
+      }
+      if (altitude < 500) {
+        switchToState(STATE_PAYLOAD_1_DEPLOY);
+      }
+      break;
+    case STATE_PAYLOAD_1_DEPLOY:
+      //take all sensor measurements
+      if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
+        currentSec = rtcSeconds;
+        float temperature = sensorModule.readTemperature();
+        float altitude = sensorModule.readAltitude();
+        
+        int voltageSensorValue = analogRead(A0);
+        float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+        
+//        double gpsLat = sensorModule.gps.location.lat();
+//        double gpsLng = sensorModule.gps.location.lng();
+//        double gpsAltitude = sensorModule.gps.altitude.meters();
+//        uint32_t gpsSatellites = sensorModule.gps.satellites.value();
+
+        communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, 345435.5, 535345.5, 703, 3), 146);
+
+      } else if (simulationMode == SIMULATION_ACTIVATED) {
+        
+      }
+     
+      if (altitude < 400)
+        switchToState(STATE_PAYLOAD_2_DEPLOY);
+
+      break;
+      
+    case STATE_PAYLOAD_2_DEPLOY:
+      if (sendTelemetry == true && simulationMode == SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
+        currentSec = rtcSeconds;
+        float temperatureInCelsius = sensorModule.readTemperature();
+        float altitude = sensorModule.readAltitude();
+        // me faltaria rotacion, con gps?
+        packageCount++; // habria que ver si los recibe?
+        // send telemetryPackage to ground
+      } else if (simulationMode == SIMULATION_ACTIVATED) {
+        float altitude = sensorModule.getAltitudeFromPressure(latestSimulationPressureValue);
+      }
+     
+//      if (altitude es constante) // guardar una altitud previa y ver delta?
+        switchToState(STATE_LANDED);
+  
+      break;
+      
+    case STATE_LANDED:
+      //tone(buzzer, 1000); // Send 1KHz sound signal...
+      //delay(1000);        // Habria que hacer esto?
+      //noTone(buzzer);     // Los delays son malos, no se como deberia sonar el buzzer, si es constante usamos lo del setup, sino hacemos con millis algo.
+      
+      break;
+  }
 }
 
 void switchToState(int8_t newState) {
