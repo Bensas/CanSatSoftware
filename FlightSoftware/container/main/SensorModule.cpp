@@ -31,7 +31,8 @@ void SensorModule::loop() {
 
 */
 float SensorModule::readAltitude() {
-  return bmp280.readAltitude(bmpBasePressure);
+  return 0.4;
+//  return bmp280.readAltitude(bmpBasePressure);
 }
 
 float SensorModule::readTemperature() {

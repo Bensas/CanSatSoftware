@@ -48,11 +48,11 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
     CMD,1000,SIMP,101325 provides a simulated pressure reading to the Container (101325 Pascals = approximately sea level). Note: this command is to be used only in simulation mode.
   */
   if (packetData[9] == 'C') { //CX command
+    setContainerTelemetryActivated(packetData[12] == 'O' && packetData[13] == 'N');
     if (packetData[12] == 'O' && packetData[13] == 'N')
       Serial.write("Telemetry activated\n");
     else
       Serial.write("Telemetry deactivated\n");
-    setContainerTelemetryActivated(packetData[12] == 'O' && packetData[13] == 'N');
   }
   else if (packetData[9] == 'S' && packetData[10] == 'I') { //SIM or SIMP command
     if (packetData[12] == ',') { //SIM command
@@ -100,6 +100,7 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
   }
   memcpy(lastCommandEcho, packetData, packetLength);
   lastCommandEcho[packetLength] = 0;
+  Serial.println("parsed");
 }
 
 void ContainerCommunicationModule::parseTelemetryPacket(uint8_t* packetData, uint8_t packetLength) {
@@ -135,9 +136,9 @@ void ContainerCommunicationModule::manageGroundCommunication() {
     uint8_t dataLength = groundResponseObj.getDataLength();
     parseReceivedPacket(packetData, dataLength);
      if (groundResponseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
-       //console.log('ST command package received and acknowledged');
+       Serial.write("ST command package received and acknowledged");
      } else {
-       //console.log('ST command package received but sender didnt get an ack');
+       Serial.write("ST command package received but sender didnt get an ack");
      }
   } else if (groundReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (groundRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
