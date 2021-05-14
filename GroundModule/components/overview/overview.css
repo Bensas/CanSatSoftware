@@ -15,6 +15,10 @@ body {
   flex-grow: 1;
 }
 
+.telemetry-overview-command-bar {
+  max-width: 35%;
+}
+
 .telemetry-overview {
   background: white;
 }

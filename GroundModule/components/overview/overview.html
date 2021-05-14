@@ -8,24 +8,23 @@
 </head>
 <body>
     <div class="row">
-        <div class="column">
+        <div class="column telemetry-overview-command-bar">
             <div>
                 <h3>Container Commands</h3>
                 <button onclick="sendCommand('CMD,2764,CX,ON')">Start Container Telemetry</button>
-                <button onclick="sendCommand('CMD,2764,P1,ON')">Start P1 Telemetry</button>
-                <button onclick="sendCommand('CMD,2764,P2,ON')">Start P2 Telemetry</button>
+                <button onclick="sendCommand('CMD,2764,SP1X,ON')">Start P1 Telemetry</button>
+                <button onclick="sendCommand('CMD,2764,SP2X,ON')">Start P2 Telemetry</button>
                 <button onclick="sendContainerSetTimeCommand()">Set current container time</button>
-                <button onclick="sendCommand('CMD,2764,CX,ON')">SIM mode enable</button>
-                <button onclick="sendCommand('CMD,2764,CX,ON')">SIM mode activate</button>
-                <button onclick="sendCommand('CMD,2764,CX,ON')">SIM mode deactivate</button>
-                <input type="text" placeholder="Custom Command...">
-                <button>Send custom command</button>
+                <button onclick="sendCommand('CMD,2764,SIM,ENABLE')">SIM mode enable</button>
+                <button onclick="sendCommand('CMD,2764,SIM,ACTIVATE')">SIM mode activate</button>
+                <button onclick="sendCommand('CMD,2764,SIM,DISABLE')">SIM mode disable</button>
+                <input id="custom-command-input" type="text" placeholder="Custom Command...">
+                <button onclick="sendCustomCommand()">Send custom command</button>
             </div>
             <div>
                 <h3>Ground controls</h3>
-                <button>Save current data</button>
-                <button>Begin send SIM data</button>
-                <button>Activate/Deactivate MQTT</button>
+                <button onclick="beginSendSimData()">Begin send SIM data</button>
+                <button onclick="toggleMQTT()">Activate/Deactivate MQTT</button>
             </div>
         </div>
     
@@ -62,7 +61,8 @@
     <div class="row">
 
     </div>
-    <script src="overview.js"></script>
+    <script src="file-utils.js"></script>
     <script src="communication.js"></script>
+    <script src="overview.js"></script>
 </body>
 </html>
