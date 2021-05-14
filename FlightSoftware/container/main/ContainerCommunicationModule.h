@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <SoftwareSerial.h>
-#include <DS3231.h>
 #include <XBee.h>
 
 #define STATE_IDLE 0
@@ -22,8 +21,6 @@ class ContainerCommunicationModule : CommunicationModule {
     uint8_t groundCommunicationState = 0;
     uint8_t payloadCommunicationState = 0;
 
-    DS3231 rtc;
-
     XBee groundXBee;
     ZBRxResponse groundResponseObj = ZBRxResponse();
     ZBTxRequest groundRequestObj;
@@ -41,8 +38,9 @@ class ContainerCommunicationModule : CommunicationModule {
     void (*setContainerTelemetryActivated)(bool telemetryActivated);
     void (*setLatestSimulationPressureValue)(float pressureVal);
     void (*setContainerSimulationMode)(int newSimulationMode);
+    void (*setRtcTimeFromCommandPacket)(uint8_t* packetData, uint8_t packetLength);
 
-    void ContainerCommunicationModule::init(XBee& groundXBeeDevice, XBee& payloadsXBeeDevice, DS3231& RTC);
+    void ContainerCommunicationModule::init(XBee& groundXBeeDevice, XBee& payloadsXBeeDevice);
 
     void setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength);
     void parseReceivedPacket(uint8_t* packetData, uint8_t packetLength);

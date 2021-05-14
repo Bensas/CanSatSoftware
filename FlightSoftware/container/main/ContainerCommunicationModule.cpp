@@ -1,30 +1,10 @@
 #include "ContainerCommunicationModule.h"
 
-void ContainerCommunicationModule::init(XBee& groundXBeeDevice, XBee& payloadsXBeeDevice, DS3231& RTC) {
+void ContainerCommunicationModule::init(XBee& groundXBeeDevice, XBee& payloadsXBeeDevice) {
   // Start the serial port
   groundXBee = groundXBeeDevice;
   payloadsXBee = payloadsXBeeDevice;
-  rtc = RTC;
   Serial.begin(19200);
-}
-
-void ContainerCommunicationModule::setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength) {
-  //Example command: CMD,2764,ST,13:35:59
-  if (packetLength != 20 || packetData[9] != 'S' || packetData[10] != 'T'){
-    // console.log('Rtc time set package is invalid!');
-    return;
-  }
-  //console.log('Parsing time package');
-  uint8_t buffer[3] = {0, 0, 0};
-
-  memcpy(buffer, &packetData[12], 2);
-  rtc.setHour(atoi(buffer)); 
-
-  memcpy(buffer, &packetData[15], 2);
-  rtc.setMinute(atoi(buffer)); 
-
-  memcpy(buffer, &packetData[18], 2);
-  rtc.setSecond(atoi(buffer)); 
 }
 
 void ContainerCommunicationModule::parseReceivedPacket(uint8_t* packetData, uint8_t packetLength) {
@@ -98,6 +78,9 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
       }
     }
   }
+  else if (packetData[9] == 'S' && packetData[10] == 'T') { //ST command
+    setRtcTimeFromCommandPacket(packetData, packetLength);
+  } 
   uint8_t j = 0;
   for (uint8_t i=0; i < packetLength;i++){ 
     if (packetData[i] != ',') lastCommandEcho[j++] = packetData[i];

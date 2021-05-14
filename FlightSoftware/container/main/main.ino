@@ -101,8 +101,23 @@ void setContainerSimulationMode(uint8_t newSimulationMode) {
   simulationMode = newSimulationMode;
 }
 
-void setRTCTime(mission_time_t time) {
-  
+void setRtcTimeFromCommandPacket(uint8_t* packetData, uint8_t packetLength) {
+  //Example command: CMD,2764,ST,13:35:59
+  if (packetLength != 20 || packetData[9] != 'S' || packetData[10] != 'T'){
+    // console.log('Rtc time set package is invalid!');
+    return;
+  }
+  //console.log('Parsing time package');
+  uint8_t buffer[3] = {0, 0, 0};
+
+  memcpy(buffer, &packetData[12], 2);
+  rtc.setHour(atoi(buffer)); 
+
+  memcpy(buffer, &packetData[15], 2);
+  rtc.setMinute(atoi(buffer)); 
+
+  memcpy(buffer, &packetData[18], 2);
+  rtc.setSecond(atoi(buffer)); 
 }
 
 
@@ -224,7 +239,8 @@ void setup() {
   communicationModule.setContainerTelemetryActivated = &setContainerTelemetryActivated;
   communicationModule.setContainerSimulationMode = &setContainerSimulationMode;
   communicationModule.setLatestSimulationPressureValue = &setLatestSimulationPressureValue;
-  communicationModule.init(groundXBee, payloadsXBee, rtc);
+  communicationModule.setRtcTimeFromCommandPacket = &setRtcTimeFromCommandPacket;
+  communicationModule.init(groundXBee, payloadsXBee);
 
   electromechanicalModule.init();
 
