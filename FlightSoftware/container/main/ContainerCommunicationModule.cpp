@@ -47,26 +47,25 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
     CMD,2764,SP1X,ON will trigger the Container to relay a command to theScience Payload 1 to begin telemetry transmissions.
     CMD,1000,SIMP,101325 provides a simulated pressure reading to the Container (101325 Pascals = approximately sea level). Note: this command is to be used only in simulation mode.
   */
-  Serial.write("commandPacket");
   if (packetData[9] == 'C') { //CX command
     if (packetData[12] == 'O' && packetData[13] == 'N')
-      Serial.write("Telemetry activated\n");
+      Serial.write("CXON\n");
     else
-      Serial.write("Telemetry deactivated\n");
+      Serial.write("CXOFF\n");
     setContainerTelemetryActivated(packetData[12] == 'O' && packetData[13] == 'N');
   }
   else if (packetData[9] == 'S' && packetData[10] == 'I') { //SIM or SIMP command
     if (packetData[12] == ',') { //SIM command
       if (packetData[13] =='D') {
-        Serial.write("SIMULATION DIASBLED\n");
+        Serial.write("SIMD\n");
         setContainerSimulationMode(SIMULATION_DISABLED);
       }
       else if (packetData[13] =='E') {
-        Serial.write("SIMULATION ENABLED\n");
+        Serial.write("SIME\n");
         setContainerSimulationMode(SIMULATION_ENABLED);
       }
       else {
-        Serial.write("SIMULATION ACTIVATED\n");
+        Serial.write("SIMA\n");
         setContainerSimulationMode(SIMULATION_ACTIVATED);
       }
     } else { //SIMP command
@@ -75,7 +74,7 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
       for (i = 14; i < packetLength; i++) {
         pressureValueBuffer[i-14] = packetData[i];
       }
-      Serial.write("SIMP Command\n");
+      Serial.write("SIMP\n");
       pressureValueBuffer[i] = 0;
       setLatestSimulationPressureValue(atof(pressureValueBuffer));
     }
@@ -83,18 +82,18 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
   else if (packetData[9] == 'S' && packetData[10] == 'P') { //SP1X or SP2X command
     if (packetData[14] == 'O' && packetData[15] == 'N'){
       if (packetData[11] == '1') {
-        Serial.write("p1 command \n");
+        Serial.write("SP1XON\n");
         payload1CommandQueue.add('1');
       } else {
-                Serial.write("p2 command \n");
+        Serial.write("SP2XON\n");
         payload2CommandQueue.add('1');
       }
     } else {
       if (packetData[11] == '1') {
-                Serial.write("p1 command \n");
+        Serial.write("SP1XOFF\n");
         payload1CommandQueue.add('0');
       } else {
-                Serial.write("p2 command \n");
+        Serial.write("SP2XOFF\n");
         payload2CommandQueue.add('0');
       }
     }
@@ -104,7 +103,6 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
     if (packetData[i] != ',') lastCommandEcho[j++] = packetData[i];
   }
   lastCommandEcho[j] = 0;
-  Serial.write(lastCommandEcho, j);
 }
 
 void ContainerCommunicationModule::parseTelemetryPacket(uint8_t* packetData, uint8_t packetLength) {

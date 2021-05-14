@@ -31,6 +31,7 @@ void SensorModule::loop() {
 
 */
 float SensorModule::readAltitude() {
+  //if (bmpBasePressure == -1) bmpBasePressure = bmp280.readAltitude()?
   return 700;
 //  return bmp280.readAltitude(bmpBasePressure);
 }
@@ -41,12 +42,11 @@ float SensorModule::readTemperature() {
 }
 
 float SensorModule::getAltitudeFromPressure(float currentPa) {
-  float altitude;
-
-  float pressure = currentPa; // in Si units for Pascal
-  pressure /= 100;
-
-  altitude = 44330 * (1.0 - pow(pressure / bmpBasePressure, 0.1903));
-
-  return altitude;
+  return currentPa;
+//  if (bmpBasePressure == -1)
+//    bmpBasePressure = currentPa;
+//  float pressure = currentPa; // in Si units for Pascal
+//  pressure /= 100;
+//
+//  return 44330 * (1.0 - pow(pressure / bmpBasePressure, 0.1903));
 }

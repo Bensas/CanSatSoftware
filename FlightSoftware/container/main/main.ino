@@ -94,7 +94,7 @@ void setContainerTelemetryActivated(bool telemetryActivated) {
 
 void setLatestSimulationPressureValue(float pressureVal) {
   latestSimulationPressureValue = pressureVal;
-//  Serial.println(latestSimulationPressureValue);
+  //Serial.write(latestSimulationPressureValue);
 }
 
 void setContainerSimulationMode(uint8_t newSimulationMode) {
@@ -260,8 +260,8 @@ void loop() {
       break;
     case STATE_PRE_DEPLOY:
       //si esto se repite en STATE_PAYLOAD_1_DEPLOY podriamos meterlo en una funcion y llamar eso directamente?
-      float altitude = 700;
-      if (sendTelemetry == true && simulationMode != SIMULATION_ACTIVATED && rtcSeconds != currentSec) {
+      float altitude = simulationMode == SIMULATION_ACTIVATED ? sensorModule.getAltitudeFromPressure(latestSimulationPressureValue) : 700;
+      if (sendTelemetry == true && rtcSeconds != currentSec) {
                 currentSec = rtcSeconds;
         float temperature = sensorModule.readTemperature();
         int voltageSensorValue = analogRead(A0);
@@ -274,9 +274,9 @@ void loop() {
         communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, 7567.5, 867556.665, 704, 4), 146);
 
       }
-      if (altitude < 500) {
-        switchToState(STATE_PAYLOAD_1_DEPLOY);
-      }
+//      if (altitude < 500) {
+//        switchToState(STATE_PAYLOAD_1_DEPLOY);
+//      }
       break;
     case STATE_PAYLOAD_1_DEPLOY:
       //take all sensor measurements
