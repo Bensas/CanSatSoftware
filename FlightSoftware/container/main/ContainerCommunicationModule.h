@@ -20,6 +20,7 @@ class ContainerCommunicationModule : CommunicationModule {
 
     uint8_t groundCommunicationState = 0;
     uint8_t payloadCommunicationState = 0;
+    uint16_t packetCount = 0;
 
     XBee groundXBee;
     ZBRxResponse groundResponseObj = ZBRxResponse();

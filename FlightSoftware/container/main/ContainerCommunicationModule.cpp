@@ -97,11 +97,13 @@ void ContainerCommunicationModule::parseTelemetryPacket(uint8_t* packetData, uin
 void ContainerCommunicationModule::sendNextPayload1Command() {
   payloadsRequestObj = ZBTxRequest(payload1Address, payload1CommandQueue.head->data, sizeof(uint8_t));
   payloadsXBee.send(payloadsRequestObj);
+  packetCount++;
 }
 
 void ContainerCommunicationModule::sendNextPayload2Command() {
   payloadsRequestObj = ZBTxRequest(payload2Address, payload2CommandQueue.head->data, sizeof(uint8_t));
   payloadsXBee.send(payloadsRequestObj);
+  packetCount++;
 }
 
 void ContainerCommunicationModule::sendNextTelemetryPacket(){
@@ -109,6 +111,7 @@ void ContainerCommunicationModule::sendNextTelemetryPacket(){
   Serial.write('\n');
   groundRequestObj = ZBTxRequest(groundAddress, telemetryPacketQueue.head->data, telemetryPacketQueue.head->dataLength);
   groundXBee.send(groundRequestObj);
+  packetCount++;
 }
 
 void ContainerCommunicationModule::loop() {
@@ -123,9 +126,9 @@ void ContainerCommunicationModule::manageGroundCommunication() {
     uint8_t dataLength = groundResponseObj.getDataLength();
     parseReceivedPacket(packetData, dataLength);
      if (groundResponseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
-       //console.log('ST command package received and acknowledged');
+       //console.log('ST command packet received and acknowledged');
      } else {
-       //console.log('ST command package received but sender didnt get an ack');
+       //console.log('ST command packet received but sender didnt get an ack');
      }
   } else if (groundReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (groundRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
@@ -136,7 +139,7 @@ void ContainerCommunicationModule::manageGroundCommunication() {
       sendNextTelemetryPacket();
     }
   } else {
-//    Serial.write("Container received package of type: ");
+//    Serial.write("Container received packet of type: ");
 //    Serial.write(groundReceiveStatus);
 //      Serial.write("No response");
   }
@@ -154,9 +157,9 @@ void ContainerCommunicationModule::managePayloadsCommunication() {
     uint8_t dataLength = payloadsResponseObj.getDataLength();
     parseReceivedPacket(packetData, dataLength);
     // if (payloadsResponseObj.getOption() == ZB_PACKET_ACKNOWLEDGED) {
-    //   //console.log('ST command package received and acknowledged');
+    //   //console.log('ST command packet received and acknowledged');
     // } else {
-    //   //console.log('ST command package received but sender didnt get an ack');
+    //   //console.log('ST command packet received but sender didnt get an ack');
     // }
   } else if (payloadsReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (payloadsRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
@@ -180,7 +183,7 @@ void ContainerCommunicationModule::managePayloadsCommunication() {
       }
     }
   } else {
-//    Serial.write("Container received package of type: ");
+//    Serial.write("Container received packet of type: ");
 //    Serial.write(payloadsReceiveStatus);
   }
 
