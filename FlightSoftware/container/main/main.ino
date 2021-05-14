@@ -89,6 +89,7 @@ SensorModule sensorModule = SensorModule();
 
 void setContainerTelemetryActivated(bool telemetryActivated) {
   sendTelemetry = telemetryActivated;
+//  EEPROM.put(PACKAGE_COUNT_EEPROM_ADDR, false);
 //  Serial.println(sendTelemetry);
 }
 
@@ -111,13 +112,14 @@ void setRtcTimeFromCommandPacket(uint8_t* packetData, uint8_t packetLength) {
   uint8_t buffer[3] = {0, 0, 0};
 
   memcpy(buffer, &packetData[12], 2);
-  rtc.setHour(atoi(buffer)); 
+  rtc.setHour(atoi(buffer));
 
   memcpy(buffer, &packetData[15], 2);
   rtc.setMinute(atoi(buffer)); 
 
   memcpy(buffer, &packetData[18], 2);
   rtc.setSecond(atoi(buffer)); 
+
 }
 
 
@@ -249,7 +251,6 @@ void setup() {
 
   //If there was no state saved in EEPROM, currentState will equal STATE_STARTUP
   if(currentState == STATE_STARTUP || currentState == 255) {
-    Serial.write("Startup...");
     switchToState(STATE_PRE_DEPLOY);
   } 
   else {
