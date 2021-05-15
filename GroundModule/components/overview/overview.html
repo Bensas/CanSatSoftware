@@ -7,9 +7,10 @@
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
 </head>
 <body>
+    <div class="header">Ground Control System</div>
     <div class="row">
-        <div class="column telemetry-overview-command-bar">
-            <div>
+        <div class="telemetry-overview-command-bar">
+            <div class="column">
                 <h3>Container Commands</h3>
                 <button onclick="sendCommand('CMD,2764,CX,ON')">Start Container Telemetry</button>
                 <button onclick="sendCommand('CMD,2764,SP1X,ON')">Start P1 Telemetry</button>
@@ -21,14 +22,14 @@
                 <input id="custom-command-input" type="text" placeholder="Custom Command...">
                 <button onclick="sendCustomCommand()">Send custom command</button>
             </div>
-            <div>
+            <div class="column">
                 <h3>Ground controls</h3>
                 <button onclick="beginSendSimData()">Begin send SIM data</button>
                 <button onclick="toggleMQTTActivated()">Activate/Deactivate MQTT</button>
             </div>
         </div>
     
-        <div class="column">
+        <div> 
             <div class="telemetry-overview">
                 <p>Container Telemetry</p>
                 <canvas id="container-telemetry-canvas"></canvas>
