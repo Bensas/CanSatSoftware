@@ -1,7 +1,7 @@
 body {
   background: grey;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
 }
 
 .column {
@@ -26,4 +26,5 @@ body {
 .telemetry-overview-status-bar {
   display: flex;
   flex-direction: row;
+  height: 2rem;
 }

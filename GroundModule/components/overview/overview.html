@@ -24,7 +24,7 @@
             <div>
                 <h3>Ground controls</h3>
                 <button onclick="beginSendSimData()">Begin send SIM data</button>
-                <button onclick="toggleMQTT()">Activate/Deactivate MQTT</button>
+                <button onclick="toggleMQTTActivated()">Activate/Deactivate MQTT</button>
             </div>
         </div>
     
@@ -58,11 +58,25 @@
             </div>
         </div>
     </div>
-    <div class="row">
-
+    <div class="row telemetry-overview-status-bar">
+        <svg id="mqtt-off-indicator" height="15px" width="15px">
+            <circle cx="7" cy="7" r="6" stroke="red" stroke-width="1" fill="red"/>
+        </svg>
+        <svg id="mqtt-on-indicator" height="15px" width="15px" style="display: none">
+            <circle cx="7" cy="7" r="6" stroke="green" stroke-width="1" fill="green"/>
+        </svg>
+        MQTT data   
+        <svg id="sim-off-indicator" height="15px" width="15px">
+            <circle cx="7" cy="7" r="6" stroke="red" stroke-width="1" fill="red"/>
+        </svg>
+        <svg id="sim-on-indicator" height="15px" width="15px" style="display: none">
+            <circle cx="7" cy="7" r="6" stroke="green" stroke-width="1" fill="green"/>
+        </svg>
+        SIM data        
     </div>
     <script src="file-utils.js"></script>
     <script src="communication.js"></script>
+    <script src="mqtt.js"></script>
     <script src="overview.js"></script>
 </body>
 </html>

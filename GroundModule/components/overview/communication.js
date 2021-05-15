@@ -6,6 +6,9 @@ var C = xbee_api.constants;
 const GROUND_MAC_ADDRESS = '0013A2004191B826';
 const CONTAINER_MAC_ADDRESS = '0013A2004191C55C';
 
+var sendSimData = false;
+var simCommands = getSimCommandListFromFile();
+var currentSimCommandIndex = 0;
 
 var xbeeAPI = new xbee_api.XBeeAPI({
   api_mode: 2
@@ -51,6 +54,12 @@ xbeeAPI.on("frame_raw", function(frame) {
 xbeeAPI.on("error", function(frame) {
   console.log(frame);
 });
+
+setInterval(()=> {
+  if (sendSimData) {
+
+  }
+}, 1000);
 
 
 function sendCommand(cmdData) {
