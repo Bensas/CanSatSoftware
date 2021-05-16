@@ -7,29 +7,29 @@
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
 </head>
 <body>
+    <div class="header">Ground Control System</div>
     <div class="row">
-        <div class="column">
-            <div>
+        <div class="telemetry-overview-command-bar">
+            <div class="column">
                 <h3>Container Commands</h3>
                 <button onclick="sendCommand('CMD,2764,CX,ON')">Start Container Telemetry</button>
-                <button onclick="sendCommand('CMD,2764,P1,ON')">Start P1 Telemetry</button>
-                <button onclick="sendCommand('CMD,2764,P2,ON')">Start P2 Telemetry</button>
+                <button onclick="sendCommand('CMD,2764,SP1X,ON')">Start P1 Telemetry</button>
+                <button onclick="sendCommand('CMD,2764,SP2X,ON')">Start P2 Telemetry</button>
                 <button onclick="sendContainerSetTimeCommand()">Set current container time</button>
-                <button onclick="sendCommand('CMD,2764,CX,ON')">SIM mode enable</button>
-                <button onclick="sendCommand('CMD,2764,CX,ON')">SIM mode activate</button>
-                <button onclick="sendCommand('CMD,2764,CX,ON')">SIM mode deactivate</button>
-                <input type="text" placeholder="Custom Command...">
-                <button>Send custom command</button>
+                <button onclick="sendCommand('CMD,2764,SIM,ENABLE')">SIM mode enable</button>
+                <button onclick="sendCommand('CMD,2764,SIM,ACTIVATE')">SIM mode activate</button>
+                <button onclick="sendCommand('CMD,2764,SIM,DISABLE')">SIM mode disable</button>
+                <input id="custom-command-input" type="text" placeholder="Custom Command...">
+                <button onclick="sendCustomCommand()">Send custom command</button>
             </div>
-            <div>
+            <div class="column">
                 <h3>Ground controls</h3>
-                <button>Save current data</button>
-                <button>Begin send SIM data</button>
-                <button>Activate/Deactivate MQTT</button>
+                <button onclick="beginSendSimData()">Begin send SIM data</button>
+                <button onclick="toggleMQTTActivated()">Activate/Deactivate MQTT</button>
             </div>
         </div>
     
-        <div class="column">
+        <div> 
             <div class="telemetry-overview">
                 <p>Container Telemetry</p>
                 <canvas id="container-telemetry-canvas"></canvas>
@@ -59,10 +59,25 @@
             </div>
         </div>
     </div>
-    <div class="row">
-
+    <div class="row telemetry-overview-status-bar">
+        <svg id="mqtt-off-indicator" height="15px" width="15px">
+            <circle cx="7" cy="7" r="6" stroke="red" stroke-width="1" fill="red"/>
+        </svg>
+        <svg id="mqtt-on-indicator" height="15px" width="15px" style="display: none">
+            <circle cx="7" cy="7" r="6" stroke="green" stroke-width="1" fill="green"/>
+        </svg>
+        MQTT data   
+        <svg id="sim-off-indicator" height="15px" width="15px">
+            <circle cx="7" cy="7" r="6" stroke="red" stroke-width="1" fill="red"/>
+        </svg>
+        <svg id="sim-on-indicator" height="15px" width="15px" style="display: none">
+            <circle cx="7" cy="7" r="6" stroke="green" stroke-width="1" fill="green"/>
+        </svg>
+        SIM data        
     </div>
-    <script src="overview.js"></script>
+    <script src="file-utils.js"></script>
     <script src="communication.js"></script>
+    <script src="mqtt.js"></script>
+    <script src="overview.js"></script>
 </body>
 </html>
