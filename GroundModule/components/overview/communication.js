@@ -42,6 +42,29 @@ serialport.on('data', function (data) {
 // Pipe the data into another stream (like a parser or standard out)
 const lineStream = serialport.pipe(new Readline())
 
+<<<<<<< Updated upstream
+=======
+xbeeAPI.on("frame_object", function(frame) {
+  console.log(frame);
+  parsePacketAndAddValues(frame.content);
+});
+
+xbeeAPI.on("frame_raw", function(frame) {
+  console.log(frame);
+});
+xbeeAPI.on("error", function(frame) {
+  console.log(frame);
+});
+
+setInterval(()=> {
+  if (sendSimData) {
+    sendCommand(simCommands[currentSimCommandIndex]);
+    currentSimCommandIndex++;
+  }
+}, 1000);
+
+
+>>>>>>> Stashed changes
 function sendCommand(cmdData) {
   var frame = {
     type: C.FRAME_TYPE.ZIGBEE_TRANSMIT_REQUEST,

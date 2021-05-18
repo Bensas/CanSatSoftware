@@ -9,7 +9,7 @@
 
 //External Component pins
 
-#define BEACON_PIN_NUMBER  9//buzzer to arduino pin 9
+#define BEACON_PIN_NUMBER 9//buzzer to arduino pin 9
 
 #define GROUND_XBEE_RX_PIN 2
 #define GROUND_XBEE_TX_PIN 3
