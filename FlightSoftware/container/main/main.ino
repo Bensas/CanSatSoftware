@@ -36,8 +36,11 @@
 #define SP2_PCOUNT_EEPROM_ADDR 8
 #define SP1_DEPLOY_TIME_EEPROM_ADDR 10
 #define SP2_DEPLOY_TIME_EEPROM_ADDR 18
+#define HAS_REACHED_APOGEE_EEPROM_ADDR 26
 
 #define TEAM_ID 2764
+
+#define ALTITUDE_LIST_LENGTH 6
 
 
 uint8_t startupStr[10] = {'_', 'S', 'T', 'A', 'R', 'T', 'U', 'P', '_', '_'};
@@ -54,6 +57,8 @@ struct mission_time_t {
   uint8_t minutes;
   uint8_t seconds;
 };
+
+struct mission_time_t missionTime;
 
 //External Components
 DS3231 rtc;
@@ -75,6 +80,10 @@ mission_time_t sp1DeployTime = {};
 mission_time_t sp2DeployTime = {};
 uint8_t telPacketString[146];
 uint8_t missionTimeStringBuffer[8];
+bool hasReachedApogee = false;
+
+float latestAltitudes[ALTITUDE_LIST_LENGTH];
+uint8_t latestAltitudesIndex = 0;
 
 float latestSimulationPressureValue = 0;
 
@@ -178,16 +187,11 @@ uint8_t* createTelemetryPacketStr(float altitude, float temp, float voltage, dou
    telPacketString[108+i+1] = 0;
    return telPacketString;
 }
-//CMD2764CXON0
-//           i
-//CMD2764cxon0
 
 mission_time_t getMissionTime(uint8_t hh, uint8_t mi, uint8_t ss){
-  struct mission_time_t missionTime = {
-    hh,
-    mi,
-    ss
-  };
+  missionTime.hours = hh;
+  missionTime.minutes = mi;
+  missionTime.seconds = ss;
   return missionTime;
 }
 
@@ -237,6 +241,7 @@ void setup() {
   EEPROM.get(CURRENT_STATE_EEPROM_ADDR, currentState);
   EEPROM.get(SP1_DEPLOY_TIME_EEPROM_ADDR, sp1DeployTime);
   EEPROM.get(SP2_DEPLOY_TIME_EEPROM_ADDR, sp2DeployTime);
+  EEPROM.get(HAS_REACHED_APOGEE_EEPROM_ADDR, hasReachedApogee);
 
   communicationModule.setContainerTelemetryActivated = &setContainerTelemetryActivated;
   communicationModule.setContainerSimulationMode = &setContainerSimulationMode;
@@ -263,6 +268,25 @@ uint16_t seconds(){
   return millis() / 1000;
 }
 
+void takeMeasurementsAndSendTelemetry(float altitude){
+  float temperature = sensorModule.readTemperature();
+  int voltageSensorValue = analogRead(A0);
+  float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+  // double gpsLat = sensorModule.gps.location.lat();
+  // double gpsLng = sensorModule.gps.location.lng();
+  // double gpsAltitude = sensorModule.gps.altitude.meters();
+  // uint32_t gpsSatellites = sensorModule.gps.satellites.value();
+  communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, 7567.5, 867556.665, 704, 4), 146);
+}
+
+bool constantAltitude(){
+  float totalDelta = 0;
+  for (int i = 1; i < ALTITUDE_LIST_LENGTH; i++) {
+    totalDelta += latestAltitudes[i] - latestAltitudes[i-1];
+  }
+  return totalDelta < 3;
+}
+
 void loop() {
   uint8_t rtcSeconds = seconds();
   unsigned long currMillis = millis();
@@ -273,38 +297,25 @@ void loop() {
   
   sensorModule.loop();
   float altitude = simulationMode == SIMULATION_ACTIVATED ? sensorModule.getAltitudeFromPressure(latestSimulationPressureValue) : 700;
+  latestAltitudes[latestAltitudesIndex++] = altitude;
+  if (latestAltitudesIndex == ALTITUDE_LIST_LENGTH) latestAltitudesIndex = ALTITUDE_LIST_LENGTH;
   switch(currentState) {
     case STATE_STARTUP:
       break;
     case STATE_PRE_DEPLOY:
-      //si esto se repite en STATE_PAYLOAD_1_DEPLOY podriamos meterlo en una funcion y llamar eso directamente?
       if (sendTelemetry == true && rtcSeconds != currentSec) {
-        currentSec = rtcSeconds;
-        float temperature = sensorModule.readTemperature();
-        int voltageSensorValue = analogRead(A0);
-        float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-//        double gpsLat = sensorModule.gps.location.lat();
-//        double gpsLng = sensorModule.gps.location.lng();
-//        double gpsAltitude = sensorModule.gps.altitude.meters();
-//        uint32_t gpsSatellites = sensorModule.gps.satellites.value();
-        communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, 7567.5, 867556.665, 704, 4), 146);
+          currentSec = rtcSeconds;
+          takeMeasurementsAndSendTelemetry(altitude);
       }
-//      if (!hasReachedApogee && altitude > 500)
-//          hasReachedApogee = true;
-//      if (hasReachedApogee && altitude < 500)
-//        switchToState(STATE_PAYLOAD_1_DEPLOY);
+      if (!hasReachedApogee && altitude > 500)
+          hasReachedApogee = true;
+      else if (hasReachedApogee && altitude < 500)
+        switchToState(STATE_PAYLOAD_1_DEPLOY);
       break;
     case STATE_PAYLOAD_1_DEPLOY:
       if (sendTelemetry == true && rtcSeconds != currentSec) {
-        currentSec = rtcSeconds;
-        float temperature = sensorModule.readTemperature();
-        int voltageSensorValue = analogRead(A0);
-        float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-//        double gpsLat = sensorModule.gps.location.lat();
-//        double gpsLng = sensorModule.gps.location.lng();
-//        double gpsAltitude = sensorModule.gps.altitude.meters();
-//        uint32_t gpsSatellites = sensorModule.gps.satellites.value();
-        communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, 7567.5, 867556.665, 704, 4), 146);
+          currentSec = rtcSeconds;
+          takeMeasurementsAndSendTelemetry(altitude);
       }
      
       if (altitude < 400)
@@ -313,20 +324,12 @@ void loop() {
       break;
       
     case STATE_PAYLOAD_2_DEPLOY:
-      //si esto se repite en STATE_PAYLOAD_1_DEPLOY podriamos meterlo en una funcion y llamar eso directamente?
       if (sendTelemetry == true && rtcSeconds != currentSec) {
-        currentSec = rtcSeconds;
-        float temperature = sensorModule.readTemperature();
-        int voltageSensorValue = analogRead(A0);
-        float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-//        double gpsLat = sensorModule.gps.location.lat();
-//        double gpsLng = sensorModule.gps.location.lng();
-//        double gpsAltitude = sensorModule.gps.altitude.meters();
-//        uint32_t gpsSatellites = sensorModule.gps.satellites.value();
-        communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, 7567.5, 867556.665, 704, 4), 146);
+          currentSec = rtcSeconds;
+          takeMeasurementsAndSendTelemetry(altitude);
       }
      
-//      if (altitude es constante) // guardar una altitud previa y ver delta?
+      if (constantAltitude())
         switchToState(STATE_LANDED);
   
       break;

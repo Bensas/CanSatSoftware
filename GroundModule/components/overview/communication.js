@@ -6,6 +6,9 @@ var C = xbee_api.constants;
 const GROUND_MAC_ADDRESS = '0013A2004191B826';
 const CONTAINER_MAC_ADDRESS = '0013A2004191C55C';
 
+var sendSimData = false;
+var simCommands = getSimCommandListFromFile();
+var currentSimCommandIndex = 0;
 
 var xbeeAPI = new xbee_api.XBeeAPI({
   api_mode: 2
@@ -30,8 +33,6 @@ serialport.on("open", function() {
   });
 });
 
-// Read data that is available but keep the stream in "paused mode"
-
 
 // Switches the port into "flowing mode"
 serialport.on('data', function (data) {
@@ -39,11 +40,6 @@ serialport.on('data', function (data) {
   console.log('Data:', data)
 })
 
-// Pipe the data into another stream (like a parser or standard out)
-const lineStream = serialport.pipe(new Readline())
-
-<<<<<<< Updated upstream
-=======
 xbeeAPI.on("frame_object", function(frame) {
   console.log(frame);
   parsePacketAndAddValues(frame.content);
@@ -63,8 +59,6 @@ setInterval(()=> {
   }
 }, 1000);
 
-
->>>>>>> Stashed changes
 function sendCommand(cmdData) {
   var frame = {
     type: C.FRAME_TYPE.ZIGBEE_TRANSMIT_REQUEST,
@@ -83,14 +77,24 @@ function sendContainerSetTimeCommand(){
   sendCommand('CMD,ST,' + utcTimeStr);
 }
 
-
-xbeeAPI.on("frame_object", function(frame) {
-  console.log(frame);
-});
-
-xbeeAPI.on("frame_raw", function(frame) {
-  console.log(frame);
-});
-xbeeAPI.on("error", function(frame) {
-  console.log(frame);
-});
+function parsePacketAndAddValues(content) {
+  const telemetryElements = content.split(',');
+  if (telemetryElements.length === 19) { // Received container telemetry
+    addValueToTelemetryChart(containerTelemetryChartConfig, Number(telemetryElements[7]), telemetryElements[1]);
+    addValueToTelemetryCsv(containerTelemetryWriteStream, content);
+  } else if (telemetryElements.length === 7) { // Received payload telemetry
+    if (telemetryElements[3] === 'SP1') {
+      addValueToTelemetryChart(payload1TelemetryChartConfig, Number(telemetryElements[7]), telemetryElements[1]);
+      addValueToTelemetryCsv(payload1TelemetryWriteStream, content);
+    } else if (telemetryElements[3] === 'SP2') {
+      addValueToTelemetryChart(payload2TelemetryChartConfig, Number(telemetryElements[7]), telemetryElements[1]);
+      addValueToTelemetryCsv(payload2TelemetryWriteStream, content);
+    } else {
+      console.log('Received invalid payload telemetry packet:');
+      console.log(content);
+    }
+  } else {
+    console.log('Received invalid payload telemetry packet:');
+    console.log(content);
+  }
+}

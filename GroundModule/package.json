@@ -19,6 +19,7 @@
     "chart.js": "^2.9.4",
     "csv-parser": "^3.0.0",
     "csv-writer": "^1.6.0",
+    "mqtt": "^4.2.6",
     "serialport": "^9.0.7",
     "xbee-api": "^0.6.0"
   },
