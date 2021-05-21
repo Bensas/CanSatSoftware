@@ -80,6 +80,7 @@ mission_time_t sp1DeployTime = {};
 mission_time_t sp2DeployTime = {};
 uint8_t telPacketString[146];
 uint8_t missionTimeStringBuffer[8];
+uint8_t gpsTimeStringBuffer[8];
 bool hasReachedApogee = false;
 
 float latestAltitudes[ALTITUDE_LIST_LENGTH];
@@ -133,14 +134,14 @@ void setRtcTimeFromCommandPacket(uint8_t* packetData, uint8_t packetLength) {
 
 
 //2764,00:01:32,10,C,F,N,N,700.2,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,0,0,CXON
-uint8_t* createTelemetryPacketStr(float altitude, float temp, float voltage, double gpsLat, double gpsLng, float gpsAltitude, uint8_t gpsSats) {
+uint8_t* createTelemetryPacketStr(float altitude, float temp, float voltage, double gpsLat, double gpsLng, float gpsAltitude, uint8_t gpsSats, uint8_t gpsHH, uint8_t gpsMI, uint8_t gpsSS) {
    
    uint8_t buffer[12];
    unsigned char precision = 1, voltagePrecision = 2, latLngPrecision = 5, bufferPadding;
    
    itoa(TEAM_ID, telPacketString, 10);
    telPacketString[4] = ',';
-   memcpy(telPacketString + 5, getMissionTimeString(12, 2, 3), 8);
+   memcpy(telPacketString + 5, generateMissionTimeString(), 8);
    telPacketString[13] = ',';
    itoa(communicationModule.packetCount, buffer, 10);
    bufferPadding =  4 - strlen(buffer);
@@ -160,7 +161,7 @@ uint8_t* createTelemetryPacketStr(float altitude, float temp, float voltage, dou
    telPacketString[38] = ',';
    dtostrf(voltage, 5, voltagePrecision, telPacketString + 39);
    telPacketString[40] = ',';
-   memcpy(telPacketString + 41, getMissionTimeString(11, 3, 23), 8);
+   memcpy(telPacketString + 41, getGpsTimeString(gpsHH, gpsMI, gpsSS), 8);
    telPacketString[49] = ',';
    dtostrf(gpsLat, 8, latLngPrecision, telPacketString + 50);
    telPacketString[58] = ',';
@@ -195,6 +196,10 @@ mission_time_t getMissionTime(uint8_t hh, uint8_t mi, uint8_t ss){
   return missionTime;
 }
 
+uint8_t* generateMissionTimeString(){
+  return getMissionTimeString(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond());
+}
+
 uint8_t* getMissionTimeString(uint8_t hh, uint8_t mi, uint8_t ss) { // Format HH:MM:SS
   if (hh >= 10){
     itoa(hh, missionTimeStringBuffer, 10);
@@ -217,6 +222,30 @@ uint8_t* getMissionTimeString(uint8_t hh, uint8_t mi, uint8_t ss) { // Format HH
     itoa(ss, missionTimeStringBuffer+7, 10);
   }
   return missionTimeStringBuffer;
+}
+
+uint8_t* getGpsTimeString(uint8_t hh, uint8_t mi, uint8_t ss) {
+  if (hh >= 10){
+    itoa(hh, gpsTimeStringBuffer, 10);
+  } else {
+    gpsTimeStringBuffer[0] = '0';
+    itoa(hh, gpsTimeStringBuffer+1, 10);
+  }
+  gpsTimeStringBuffer[2] = ':';
+  if (mi >= 10){
+    itoa(mi, gpsTimeStringBuffer+3, 10);
+  } else {
+    gpsTimeStringBuffer[3] = '0';
+    itoa(mi, gpsTimeStringBuffer+4, 10);
+  }
+  gpsTimeStringBuffer[5] = ':';
+  if (ss >= 10){
+    itoa(ss, gpsTimeStringBuffer+6, 10);
+  } else {
+    gpsTimeStringBuffer[6] = '0';
+    itoa(ss, gpsTimeStringBuffer+7, 10);
+  }
+  return gpsTimeStringBuffer;
 }
 
 void setup() {
@@ -275,7 +304,16 @@ void takeMeasurementsAndSendTelemetry(float altitude){
   double gpsLng = sensorModule.gps.location.lng();
   double gpsAltitude = sensorModule.gps.altitude.meters();
   uint32_t gpsSatellites = sensorModule.gps.satellites.value();
-  communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, gpsLat, gpsLng, gpsAltitude, gpsSatellites), 146);
+  communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude,
+                                                                        temperature,
+                                                                        voltage,
+                                                                        sensorModule.gps.location.lat(),
+                                                                        sensorModule.gps.location.lng(),
+                                                                        sensorModule.gps.altitude.meters(),
+                                                                        sensorModule.gps.satellites.value(),
+                                                                        sensorModule.gps.time.hour(),
+                                                                        sensorModule.gps.time.minute(),
+                                                                        sensorModule.gps.time.second()), 146);
 }
 
 bool constantAltitude(){
