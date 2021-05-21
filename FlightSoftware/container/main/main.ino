@@ -224,7 +224,7 @@ void setup() {
   Wire.begin();
 
   groundXBeeSerial.begin(9600);
-//  payloadsXBeeSerial.begin(9600);
+  payloadsXBeeSerial.begin(9600);
   groundXBee.setSerial(groundXBeeSerial);
   payloadsXBee.setSerial(payloadsXBeeSerial);
 
@@ -264,8 +264,8 @@ void setup() {
   }
 }
 
-uint16_t seconds(){
-  return millis() / 1000;
+uint8_t seconds(){
+  return rtc.getSecond()
 }
 
 void takeMeasurementsAndSendTelemetry(float altitude){
@@ -367,7 +367,6 @@ void switchToState(int8_t newState) {
       break;
     case STATE_LANDED:
       sendTelemetry = false;
-      tone(BEACON_PIN_NUMBER, 1000); // Send 1KHz sound signal...
       break;
   }
 }

@@ -2,6 +2,7 @@
 *.pak
 *.dll
 *.exe
+.DS_Store
 GroundModule/dist/GroundModule Setup 1.0.0.exe.blockmap
 GroundModule/dist/win-unpacked/icudtl.dat
 GroundModule/dist/win-unpacked/LICENSE.electron.txt
