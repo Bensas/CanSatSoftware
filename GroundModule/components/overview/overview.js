@@ -157,6 +157,8 @@ payload2TelemetryChart = new chartjs.Chart(payload2TelemetryCanvasCtx, payload2T
 function addValueToTelemetryChart(chartConfig, value, label) {
   chartConfig.data.datasets[0].data.push(value);
   chartConfig.data.labels.push(label);
+  console.log(chartConfig);
+  payload1TelemetryChart.update(chartConfig);
 }
 
 function sendCustomCommand() {
