@@ -7,6 +7,7 @@
 #include <EEPROM.h>
 #include <avr/pgmspace.h>
 #include <DS3231.h>
+#include <TimerOne.h>
 
 //External Component pins
 
@@ -43,6 +44,7 @@
 
 #define ALTITUDE_LIST_LENGTH 6
 
+unsigned long t=366.3,k=512;// default 1000 μs (1000 Hz), meander, pulse duration is equal to duty cycle k = 512 (50%)
 
 static const uint8_t startupStr[10] PROGMEM = {'_', 'S', 'T', 'A', 'R', 'T', 'U', 'P', '_', '_'};
 static const uint8_t predeploStr[10] PROGMEM = {'P', 'R', 'E', '_', 'D', 'E', 'P', 'L', 'O', 'Y'};
@@ -227,6 +229,7 @@ void setup() {
   sensorModule.init();
 
   pinMode(BEACON_PIN_NUMBER, OUTPUT);
+  Timer1.initialize(t); // period
   
   //Retrieve state variables from EEPROM
   EEPROM.get(SEND_TELEMETRY_EEPROM_ADDR, sendTelemetry);
@@ -331,10 +334,8 @@ void loop() {
       break;
       
     case STATE_LANDED:
-      if (rtcSeconds != currentSec) {
-          currentSec = rtcSeconds;
-          if (currentSec % 2 == 0) tone(BEACON_PIN_NUMBER, 1000);
-          else noTone(BEACON_PIN_NUMBER);
+      if (rtcSeconds % 2 == 0) {
+        Timer1.pwm(BEACON_PIN_NUMBER, k,t); // k - fill factor 0-1023.
       }
       break;
   }
