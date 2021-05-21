@@ -22,12 +22,12 @@ class ContainerCommunicationModule : CommunicationModule {
     uint8_t payloadCommunicationState = 0;
     uint16_t packetCount = 0;
 
-    XBee groundXBee;
+    XBee groundXBee = XBee();;
     ZBRxResponse groundResponseObj = ZBRxResponse();
     ZBTxRequest groundRequestObj;
     ZBTxStatusResponse groundRequestStatusObj = ZBTxStatusResponse();
 
-    XBee payloadsXBee;
+    XBee payloadsXBee = XBee();;
     ZBRxResponse payloadsResponseObj = ZBRxResponse();
     ZBTxRequest payloadsRequestObj;
     ZBTxStatusResponse payloadsRequestStatusObj = ZBTxStatusResponse();
@@ -41,7 +41,7 @@ class ContainerCommunicationModule : CommunicationModule {
     void (*setContainerSimulationMode)(int newSimulationMode);
     void (*setRtcTimeFromCommandPacket)(uint8_t* packetData, uint8_t packetLength);
 
-    void ContainerCommunicationModule::init(XBee& groundXBeeDevice, XBee& payloadsXBeeDevice);
+    void ContainerCommunicationModule::init(SoftwareSerial& groundXBeeSerial, SoftwareSerial& payloadsXBeeSerial);
 
     void setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength);
     void parseReceivedPacket(uint8_t* packetData, uint8_t packetLength);

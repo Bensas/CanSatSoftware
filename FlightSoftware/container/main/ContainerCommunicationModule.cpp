@@ -1,9 +1,9 @@
 #include "ContainerCommunicationModule.h"
 
-void ContainerCommunicationModule::init(XBee& groundXBeeDevice, XBee& payloadsXBeeDevice) {
+void ContainerCommunicationModule::init(SoftwareSerial& groundXBeeSerial, SoftwareSerial& payloadsXBeeSerial) {
   // Start the serial port
-  groundXBee = groundXBeeDevice;
-  payloadsXBee = payloadsXBeeDevice;
+  groundXBee.setSerial(groundXBeeSerial);
+  payloadsXBee.setSerial(payloadsXBeeSerial);
   Serial.begin(19200);
 }
 

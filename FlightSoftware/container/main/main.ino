@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <Wire.h>
 #include <EEPROM.h>
+#include <avr/pgmspace.h>
 #include <DS3231.h>
 
 //External Component pins
@@ -43,14 +44,13 @@
 #define ALTITUDE_LIST_LENGTH 6
 
 
-uint8_t startupStr[10] = {'_', 'S', 'T', 'A', 'R', 'T', 'U', 'P', '_', '_'};
-uint8_t predeploStr[10] = {'P', 'R', 'E', '_', 'D', 'E', 'P', 'L', 'O', 'Y'};
-uint8_t p1DeployedStr[10] = {'P', '1', 'D', 'E', 'P', 'L', 'O', 'Y', 'E', 'D'};
-uint8_t p2DeployedStr[10] = {'P', '2', 'D', 'E', 'P', 'L', 'O', 'Y', 'E', 'D'};
-uint8_t landedStr[10] = {'_', '_', 'L', 'A', 'N', 'D', 'E', 'D', '_', '_'};
+static const uint8_t startupStr[10] PROGMEM = {'_', 'S', 'T', 'A', 'R', 'T', 'U', 'P', '_', '_'};
+static const uint8_t predeploStr[10] PROGMEM = {'P', 'R', 'E', '_', 'D', 'E', 'P', 'L', 'O', 'Y'};
+static const uint8_t p1DeployedStr[10] PROGMEM = {'P', '1', 'D', 'E', 'P', 'L', 'O', 'Y', 'E', 'D'};
+static const uint8_t p2DeployedStr[10] PROGMEM = {'P', '2', 'D', 'E', 'P', 'L', 'O', 'Y', 'E', 'D'};
+static const uint8_t landedStr[10] PROGMEM = {'_', '_', 'L', 'A', 'N', 'D', 'E', 'D', '_', '_'};
 
 uint8_t* STATE_STRING_ARRAY[5] = {startupStr, predeploStr, p1DeployedStr, p2DeployedStr, landedStr};
-// Types
 
 struct mission_time_t {
   uint8_t hours;
@@ -62,8 +62,6 @@ struct mission_time_t missionTime;
 
 //External Components
 DS3231 rtc;
-XBee groundXBee = XBee();
-XBee payloadsXBee = XBee();
 
 // The serial connection to the GPS device
 SoftwareSerial groundXBeeSerial(GROUND_XBEE_RX_PIN, GROUND_XBEE_TX_PIN);
@@ -225,8 +223,6 @@ void setup() {
 
   groundXBeeSerial.begin(9600);
   payloadsXBeeSerial.begin(9600);
-  groundXBee.setSerial(groundXBeeSerial);
-  payloadsXBee.setSerial(payloadsXBeeSerial);
 
   sensorModule.init();
 
@@ -247,7 +243,7 @@ void setup() {
   communicationModule.setContainerSimulationMode = &setContainerSimulationMode;
   communicationModule.setLatestSimulationPressureValue = &setLatestSimulationPressureValue;
   communicationModule.setRtcTimeFromCommandPacket = &setRtcTimeFromCommandPacket;
-  communicationModule.init(groundXBee, payloadsXBee);
+  communicationModule.init(groundXBeeSerial, payloadsXBeeSerial);
 
   electromechanicalModule.init();
 
@@ -265,7 +261,7 @@ void setup() {
 }
 
 uint8_t seconds(){
-  return rtc.getSecond()
+  return rtc.getSecond();
 }
 
 void takeMeasurementsAndSendTelemetry(float altitude){
@@ -335,11 +331,10 @@ void loop() {
       break;
       
     case STATE_LANDED:
-      tone(buzzer, 1000); // Send 1KHz sound signal...
       if (rtcSeconds != currentSec) {
           currentSec = rtcSeconds;
-          if (currentSec % 2 == 0) tone(buzzer, 1000);
-          else noTone(buzzer);
+          if (currentSec % 2 == 0) tone(BEACON_PIN_NUMBER, 1000);
+          else noTone(BEACON_PIN_NUMBER);
       }
       break;
   }
