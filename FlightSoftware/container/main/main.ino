@@ -226,9 +226,9 @@ void setup() {
   groundXBeeSerial.begin(9600);
 //  payloadsXBeeSerial.begin(9600);
   groundXBee.setSerial(groundXBeeSerial);
-//  payloadsXBee.setSerial(payloadsXBeeSerial);
+  payloadsXBee.setSerial(payloadsXBeeSerial);
 
-//  sensorModule.init();
+  sensorModule.init();
 
   pinMode(BEACON_PIN_NUMBER, OUTPUT);
   
@@ -272,11 +272,11 @@ void takeMeasurementsAndSendTelemetry(float altitude){
   float temperature = sensorModule.readTemperature();
   int voltageSensorValue = analogRead(A0);
   float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-  // double gpsLat = sensorModule.gps.location.lat();
-  // double gpsLng = sensorModule.gps.location.lng();
-  // double gpsAltitude = sensorModule.gps.altitude.meters();
-  // uint32_t gpsSatellites = sensorModule.gps.satellites.value();
-  communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, 7567.5, 867556.665, 704, 4), 146);
+  double gpsLat = sensorModule.gps.location.lat();
+  double gpsLng = sensorModule.gps.location.lng();
+  double gpsAltitude = sensorModule.gps.altitude.meters();
+  uint32_t gpsSatellites = sensorModule.gps.satellites.value();
+  communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, voltage, gpsLat, gpsLng, gpsAltitude, gpsSatellites), 146);
 }
 
 bool constantAltitude(){
@@ -335,9 +335,12 @@ void loop() {
       break;
       
     case STATE_LANDED:
-      //tone(buzzer, 1000); // Send 1KHz sound signal...
-      //delay(1000);        // Habria que hacer esto?
-      //noTone(buzzer);     // Los delays son malos, no se como deberia sonar el buzzer, si es constante usamos lo del setup, sino hacemos con millis algo.
+      tone(buzzer, 1000); // Send 1KHz sound signal...
+      if (rtcSeconds != currentSec) {
+          currentSec = rtcSeconds;
+          if (currentSec % 2 == 0) tone(buzzer, 1000);
+          else noTone(buzzer);
+      }
       break;
   }
 }

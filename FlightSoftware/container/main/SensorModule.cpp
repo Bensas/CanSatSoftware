@@ -4,25 +4,23 @@
 SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
 
 void SensorModule::init() {
-  // BMP280 SETUP
-//  if (!bmp280.begin()) {
-//    Serial.write("Could not find a valid BMP280 sensor, check wiring!");
-////    while (1);
-//  }
-//  bmp280.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
-//            Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
-//            Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
-//            Adafruit_BMP280::FILTER_X16,      /* Filtering. */
-//            Adafruit_BMP280::STANDBY_MS_500);
-//  bmpBasePressure = bmp280.readPressure();
+  if (!bmp280.begin(BMP_280_S2C_ADDRESS)) {
+    Serial.write("Could not find a valid BMP280 sensor, check wiring!");
+  }
+  bmp280.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
+            Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
+            Adafruit_BMP280::SAMPLING_X16,    /* Pressure oversampling */
+            Adafruit_BMP280::FILTER_X16,      /* Filtering. */
+            Adafruit_BMP280::STANDBY_MS_500);
+  bmpBasePressureHPa = bmp280.readPressure() / 100;
 
   // GPS SETUP
   gpsSerial.begin(GPS_BAUD_RATE);
 }
 
 void SensorModule::loop() {
-//  while (gpsSerial.available() > 0)
-//    gps.encode(gpsSerial.read());
+ while (gpsSerial.available() > 0)
+   gps.encode(gpsSerial.read());
 }
 
 /*
@@ -31,22 +29,19 @@ void SensorModule::loop() {
 
 */
 float SensorModule::readAltitude() {
-  //if (bmpBasePressure == -1) bmpBasePressure = bmp280.readAltitude()?
-  return 700;
-//  return bmp280.readAltitude(bmpBasePressure);
+  if (bmpBasePressureHPa == -1) bmpBasePressureHPa = bmp280.readPressure() / 100;
+  return bmp280.readAltitude(bmpBasePressureHPa);
 }
 
 float SensorModule::readTemperature() {
-  return 42;
-//  return bmp280.readTemperature();
+  return bmp280.readTemperature();
 }
 
 float SensorModule::getAltitudeFromPressure(float currentPa) {
-  return currentPa;
-//  if (bmpBasePressure == -1)
-//    bmpBasePressure = currentPa;
-//  float pressure = currentPa; // in Si units for Pascal
-//  pressure /= 100;
-//
-//  return 44330 * (1.0 - pow(pressure / bmpBasePressure, 0.1903));
+  if (bmpBasePressureHPa == -1)
+    bmpBasePressureHPa = currentPa / 100;
+  float pressure = currentPa; // in Si units for Pascal
+  pressure /= 100;
+
+  return 44330 * (1.0 - pow(pressure / bmpBasePressureHPa, 0.1903));
 }

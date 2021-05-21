@@ -13,8 +13,6 @@ void PayloadSensorModule::init() {
   bmpBasePressure = bmp280.readPressure() / 100;
 
   mpu9250.beginGyro();
-
-
 }
 
 /*
@@ -24,7 +22,6 @@ void PayloadSensorModule::init() {
 */
 float PayloadSensorModule::readAltitude() {
   if (bmpBasePressure == -1) bmpBasePressure = bmp280.readPressure() / 100;
-//  Serial.println(bmpBasePressure);
   return bmp280.readAltitude(bmpBasePressure);
 }
 
@@ -34,12 +31,9 @@ float PayloadSensorModule::readTemperature() {
 
 int PayloadSensorModule::readGyroSpeed() {
   if (mpu9250.gyroUpdate() == 0) {
-//    float gX = mpu9250.gyroX();
-//    float gY = mpu9250.gyroY();
     float gZ = mpu9250.gyroZ(); //In degrees per second
     float rpm = gZ / 360;
-    
     return abs(rpm);
   }
-  return 42;
+  return 0;
 }
