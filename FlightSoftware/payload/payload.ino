@@ -56,13 +56,16 @@ void setPayloadTelemetryActivated(bool telemetryActivated) {
 uint8_t* createTelemetryPacketStr(float altitude, float temp, int rpm) {   
    uint8_t buffer[12];
    unsigned char precision = 1, voltagePrecision = 2, bufferPadding;
+   createZeroesString(telPacketString, 42);
    itoa(2764, telPacketString, 10);
    telPacketString[4] = ',';
    getMissionTimeString(0, 0, 0);
    memcpy(telPacketString + 5, &missionTimeStringBuffer, 8);
    telPacketString[13] = ',';
+   
    itoa(communicationModule.packetCount, buffer, 10);
    bufferPadding =  4 - strlen(buffer);
+   
    memcpy(telPacketString + 14 + bufferPadding, buffer, strlen(buffer));
    telPacketString[18] = ',';
    telPacketString[19] = 'S';
@@ -79,6 +82,12 @@ uint8_t* createTelemetryPacketStr(float altitude, float temp, int rpm) {
    Serial.write(telPacketString, 39);
    Serial.write('\n');
    return telPacketString;
+}
+
+void createZeroesString(uint8_t* pointer, uint8_t length) {
+  int i = 0;
+  while (i< length) pointer[i++] = '0';
+  pointer[i] = 0;
 }
 
 void getMissionTimeString(uint8_t hh, uint8_t mi, uint8_t ss) { // Format HH:MM:SS

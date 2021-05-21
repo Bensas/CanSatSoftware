@@ -4,9 +4,9 @@ const fs = require('fs');
 const CONTAINER_TELEMETRY_FILE_NAME = 'Flight_2764_C.csv'
 const PAYLOAD_1_TELEMETRY_FILE_NAME = 'Flight_2764_SP1.csv'
 const PAYLOAD_2_TELEMETRY_FILE_NAME = 'Flight_2764_SP2.csv'
-var containerTelemetryWriteStream = fs.createWriteStream('telemetry/' + CONTAINER_TELEMETRY_FILE_NAME, {flags:'a'});
-var payload1TelemetryWriteStream = fs.createWriteStream('telemetry/' + PAYLOAD_1_TELEMETRY_FILE_NAME, {flags:'a'});
-var payload2TelemetryWriteStream = fs.createWriteStream('telemetry/' + PAYLOAD_2_TELEMETRY_FILE_NAME, {flags:'a'});
+var containerTelemetryWriteStream = fs.createWriteStream('telemetry/' + CONTAINER_TELEMETRY_FILE_NAME, {flags:'w'});
+var payload1TelemetryWriteStream = fs.createWriteStream('telemetry/' + PAYLOAD_1_TELEMETRY_FILE_NAME, {flags:'w'});
+var payload2TelemetryWriteStream = fs.createWriteStream('telemetry/' + PAYLOAD_2_TELEMETRY_FILE_NAME, {flags:'w'});
 addValueToTelemetryCsv(containerTelemetryWriteStream,
   '<TEAM_ID>,<MISSION_TIME>,<PACKET_COUNT>,<PACKET_TYPE>,<MODE>,<SP1_RELEASED>,\
   <SP2_RELEASED>,<ALTITUDE>,<TEMP>,<VOLTAGE>,<GPS_TIME>,<GPS_LATITUDE>,<GPS_LONGITUDE>,\
