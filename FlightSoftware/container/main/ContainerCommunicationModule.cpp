@@ -88,22 +88,26 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
   lastCommandEcho[j] = 0;
 }
 
+// 2764,20:02:03,1232,S1, 23.4,19.2,200
 void ContainerCommunicationModule::parseTelemetryPacket(uint8_t* packetData, uint8_t packetLength) {
-  uint8_t packetDataCopy[packetLength];
-  memcpy(packetDataCopy, packetData, packetLength);
-  telemetryPacketQueue.add(packetDataCopy, packetLength);
+  if (packetData[20] == '1') {
+    memcpy(latestPayload1Packet, packetData, packetLength);
+    telemetryPacketQueue.add(latestPayload1Packet, packetLength);
+  }
+  else if (packetData[20] == '2') {
+    memcpy(latestPayload2Packet, packetData, packetLength);
+    telemetryPacketQueue.add(latestPayload2Packet, packetLength);
+  }
 }
 
 void ContainerCommunicationModule::sendNextPayload1Command() {
   payloadsRequestObj = ZBTxRequest(payload1Address, payload1CommandQueue.head->data, sizeof(uint8_t));
   payloadsXBee.send(payloadsRequestObj);
-  packetCount++;
 }
 
 void ContainerCommunicationModule::sendNextPayload2Command() {
   payloadsRequestObj = ZBTxRequest(payload2Address, payload2CommandQueue.head->data, sizeof(uint8_t));
   payloadsXBee.send(payloadsRequestObj);
-  packetCount++;
 }
 
 void ContainerCommunicationModule::sendNextTelemetryPacket(){
@@ -116,7 +120,7 @@ void ContainerCommunicationModule::sendNextTelemetryPacket(){
 
 void ContainerCommunicationModule::loop() {
   manageGroundCommunication();
-//  managePayloadsCommunication();
+  managePayloadsCommunication();
 }
 
 void ContainerCommunicationModule::manageGroundCommunication() {

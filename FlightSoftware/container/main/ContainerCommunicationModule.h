@@ -14,6 +14,8 @@
 #define SIMULATION_ENABLED 1
 #define SIMULATION_ACTIVATED 2
 
+#define PAYLOAD_MAX_PACKAGE_LENGTH 42
+
 class ContainerCommunicationModule : CommunicationModule {
   public:
     uint8_t lastCommandEcho[24];
@@ -33,7 +35,9 @@ class ContainerCommunicationModule : CommunicationModule {
     ZBTxStatusResponse payloadsRequestStatusObj = ZBTxStatusResponse();
 
     PayloadCommandQueue payload1CommandQueue = PayloadCommandQueue();
+    uint8_t latestPayload1Packet[PAYLOAD_MAX_PACKAGE_LENGTH];
     PayloadCommandQueue payload2CommandQueue = PayloadCommandQueue();
+    uint8_t latestPayload2Packet[PAYLOAD_MAX_PACKAGE_LENGTH];
     TelemetryPacketQueue telemetryPacketQueue = TelemetryPacketQueue();
 
     void (*setContainerTelemetryActivated)(bool telemetryActivated);

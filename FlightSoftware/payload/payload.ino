@@ -52,7 +52,7 @@ void setPayloadTelemetryActivated(bool telemetryActivated) {
 
 
 //2764,00:01:32,10,C,F,N,N,700.2,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,0,0,CXON
-// 2764,20:02:03,232,S1,23.4,19.2,200
+// 2764,20:02:03,1232,S1, 23.4,19.2,200
 uint8_t* createTelemetryPacketStr(float altitude, float temp, int rpm) {   
    uint8_t buffer[12];
    unsigned char precision = 1, voltagePrecision = 2, bufferPadding;
