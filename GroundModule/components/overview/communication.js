@@ -82,14 +82,23 @@ function parsePacketAndAddValues(content) {
   if (telemetryElements.length === 19) { // Received container telemetry
     addValueToTelemetryChart(containerTelemetryChart, Number(telemetryElements[7]), telemetryElements[1]);
     addValueToTelemetryCsv(containerTelemetryWriteStream, content);
+    setCurrentTemperature('container-telemetry-temperature', telemetryElements[8]);
+    setCurrentBatteryVoltage('container-telemetry-battery-voltage', telemetryElements[9]);
+    setCurrentGPSCoords('container-telemetry-gps-coordinates', telemetryElements[11], telemetryElements[12]);
+    publishMQTTMessage(content);
   } else { // Received payload telemetry
     if (telemetryElements[3] === 'S1') {
       addValueToTelemetryChart(payload1TelemetryChart, Number(telemetryElements[4]), telemetryElements[1]);
       addValueToTelemetryCsv(payload1TelemetryWriteStream, content);
+      setCurrentTemperature('payload-1-telemetry-temperature', telemetryElements[5]);
+      setCurrentRotationRate('payload-1-telemetry-rotation-rate', telemetryElements[6]);
+      publishMQTTMessage(content);
     } else if (telemetryElements[3] === 'S2') {
-
       addValueToTelemetryChart(payload2TelemetryChart, Number(telemetryElements[4]), telemetryElements[1]);
       addValueToTelemetryCsv(payload2TelemetryWriteStream, content);
+      setCurrentTemperature('payload-2-telemetry-temperature', telemetryElements[5]);
+      setCurrentRotationRate('payload-2-telemetry-rotation-rate', telemetryElements[6]);
+      publishMQTTMessage(content);
     } else {
       console.log('Received invalid payload telemetry packet:');
       console.log(telemetryElements[3]);

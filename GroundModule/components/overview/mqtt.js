@@ -40,5 +40,5 @@ function toggleMQTTActivated() {
 
 //Example telemetry '2764,0:01:32,10,C,F,N,N,645,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,0,0,CXON'
 function publishMQTTMessage(message){
-  client.publish(topic, topic);
+  client.publish(topic, message);
 }
