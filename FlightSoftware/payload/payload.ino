@@ -8,8 +8,8 @@
 #include <DS3231.h>
 
 //External Component pins
-#define XBEE_RX_PIN 2
-#define XBEE_TX_PIN 5
+#define XBEE_RX_PIN 3
+#define XBEE_TX_PIN 4
 
 //EEPROM Memory addressesele
 #define SEND_TELEMETRY_EEPROM_ADDR 1
@@ -141,7 +141,6 @@ void takeMeasurementsAndSendTelemetry(){
   float temperature = sensorModule.readTemperature();
   int rpm = sensorModule.readGyroSpeed();
   communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, rpm), 42);
-  Serial.write("tuvi");
 }
 
 void loop() {
