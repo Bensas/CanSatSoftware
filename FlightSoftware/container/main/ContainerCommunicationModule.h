@@ -16,6 +16,8 @@
 
 #define PAYLOAD_MAX_PACKAGE_LENGTH 42
 
+#define PACKET_COUNT_EEPROM_ADDR 4
+
 class ContainerCommunicationModule : CommunicationModule {
   public:
     uint8_t lastCommandEcho[24];

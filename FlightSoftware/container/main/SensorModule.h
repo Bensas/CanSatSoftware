@@ -15,7 +15,7 @@ class SensorModule {
   public:
   float bmpBasePressureHPa = -1;
   Adafruit_BMP280 bmp280;
-  TinyGPSPlus gps;
+//  TinyGPSPlus gps;
   
   void init();
   void loop();

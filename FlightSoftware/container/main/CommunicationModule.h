@@ -1,4 +1,5 @@
 #include <XBee.h>
+#include <EEPROM.h>
 
 class CommunicationModule {
   protected:

@@ -5,6 +5,7 @@ void ContainerCommunicationModule::init(SoftwareSerial& groundXBeeSerial, Softwa
   groundXBee.setSerial(groundXBeeSerial);
   payloadsXBee.setSerial(payloadsXBeeSerial);
   Serial.begin(19200);
+  EEPROM.get(PACKET_COUNT_EEPROM_ADDR, packetCount);
 }
 
 void ContainerCommunicationModule::parseReceivedPacket(uint8_t* packetData, uint8_t packetLength) {
@@ -116,6 +117,7 @@ void ContainerCommunicationModule::sendNextTelemetryPacket(){
   groundRequestObj = ZBTxRequest(groundAddress, telemetryPacketQueue.head->data, telemetryPacketQueue.head->dataLength);
   groundXBee.send(groundRequestObj);
   packetCount++;
+  EEPROM.put(PACKET_COUNT_EEPROM_ADDR, packetCount);
 }
 
 void ContainerCommunicationModule::loop() {
