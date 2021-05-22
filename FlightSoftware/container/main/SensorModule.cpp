@@ -19,8 +19,8 @@ void SensorModule::init() {
 }
 
 void SensorModule::loop() {
- while (gpsSerial.available() > 0)
-   gps.encode(gpsSerial.read());
+// while (gpsSerial.available() > 0)
+//   gps.encode(gpsSerial.read());
 }
 
 /*
@@ -29,12 +29,14 @@ void SensorModule::loop() {
 
 */
 float SensorModule::readAltitude() {
-  if (bmpBasePressureHPa == -1) bmpBasePressureHPa = bmp280.readPressure() / 100;
-  return bmp280.readAltitude(bmpBasePressureHPa);
+  return 843.2;
+//  if (bmpBasePressureHPa == -1) bmpBasePressureHPa = bmp280.readPressure() / 100;
+//  return bmp280.readAltitude(bmpBasePressureHPa);
 }
 
 float SensorModule::readTemperature() {
-  return bmp280.readTemperature();
+  return 42;
+//  return bmp280.readTemperature();
 }
 
 float SensorModule::getAltitudeFromPressure(float currentPa) {

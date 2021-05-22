@@ -13,10 +13,10 @@
 
 #define BEACON_PIN_NUMBER 9//buzzer to arduino pin 9
 
-#define GROUND_XBEE_RX_PIN 2
-#define GROUND_XBEE_TX_PIN 3
-#define PAYLOADS_XBEE_RX_PIN 4
-#define PAYLOADS_XBEE_TX_PIN 5
+#define GROUND_XBEE_RX_PIN 3
+#define GROUND_XBEE_TX_PIN 4
+#define PAYLOADS_XBEE_RX_PIN 5
+#define PAYLOADS_XBEE_TX_PIN 6
 
 //Enums
 #define STATE_STARTUP 0
@@ -33,7 +33,7 @@
 #define CURRENT_STATE_EEPROM_ADDR 0
 #define SEND_TELEMETRY_EEPROM_ADDR 1
 #define SIMULATION_MODE_EEPROM_ADDR 2
-#define PACKAGE_COUNT_EEPROM_ADDR 4
+#define PACKET_COUNT_EEPROM_ADDR 4
 #define SP1_PCOUNT_EEPROM_ADDR 6
 #define SP2_PCOUNT_EEPROM_ADDR 8
 #define SP1_DEPLOY_TIME_EEPROM_ADDR 10
@@ -73,13 +73,10 @@ SoftwareSerial payloadsXBeeSerial(PAYLOADS_XBEE_RX_PIN, PAYLOADS_XBEE_TX_PIN);
 uint8_t currentState = STATE_STARTUP;
 bool sendTelemetry = false;
 uint8_t simulationMode = SIMULATION_DISABLED;
-uint16_t packageCount = 0;
-uint16_t sp1PackageCount = 0;
-uint16_t sp2PackageCount = 0;
 mission_time_t sp1DeployTime = {};
 mission_time_t sp2DeployTime = {};
-uint8_t telPacketString[146];
-uint8_t missionTimeStringBuffer[8];
+uint8_t telPacketString[133];
+uint8_t missionTimeStringBuffer[10];
 uint8_t gpsTimeStringBuffer[8];
 bool hasReachedApogee = false;
 
@@ -141,7 +138,8 @@ uint8_t* createTelemetryPacketStr(float altitude, float temp, float voltage, dou
    
    itoa(TEAM_ID, telPacketString, 10);
    telPacketString[4] = ',';
-   memcpy(telPacketString + 5, generateMissionTimeString(), 8);
+   generateMissionTimeString();
+   memcpy(telPacketString + 5, missionTimeStringBuffer, 8);
    telPacketString[13] = ',';
    itoa(communicationModule.packetCount, buffer, 10);
    bufferPadding =  4 - strlen(buffer);
@@ -255,7 +253,7 @@ void setup() {
   groundXBeeSerial.begin(9600);
   payloadsXBeeSerial.begin(9600);
 
-  sensorModule.init();
+//  sensorModule.init();
 
   pinMode(BEACON_PIN_NUMBER, OUTPUT);
   Timer1.initialize(t); // period
@@ -263,9 +261,6 @@ void setup() {
   //Retrieve state variables from EEPROM
   EEPROM.get(SEND_TELEMETRY_EEPROM_ADDR, sendTelemetry);
   EEPROM.get(SIMULATION_MODE_EEPROM_ADDR, simulationMode);
-  EEPROM.get(PACKAGE_COUNT_EEPROM_ADDR, packageCount);
-  EEPROM.get(SP1_PCOUNT_EEPROM_ADDR, sp1PackageCount);
-  EEPROM.get(SP2_PCOUNT_EEPROM_ADDR, sp2PackageCount);
   EEPROM.get(CURRENT_STATE_EEPROM_ADDR, currentState);
   EEPROM.get(SP1_DEPLOY_TIME_EEPROM_ADDR, sp1DeployTime);
   EEPROM.get(SP2_DEPLOY_TIME_EEPROM_ADDR, sp2DeployTime);
@@ -284,6 +279,7 @@ void setup() {
 
   //If there was no state saved in EEPROM, currentState will equal STATE_STARTUP
   if(currentState == STATE_STARTUP || currentState == 255) {
+    Serial.write("Hola");
     switchToState(STATE_PRE_DEPLOY);
   } 
   else {
@@ -293,27 +289,28 @@ void setup() {
 }
 
 uint8_t seconds(){
-  return rtc.getSecond();
+  return millis() / 1000;
+//  return rtc.getSecond();
 }
 
 void takeMeasurementsAndSendTelemetry(float altitude){
   float temperature = sensorModule.readTemperature();
   int voltageSensorValue = analogRead(A0);
   float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-  double gpsLat = sensorModule.gps.location.lat();
-  double gpsLng = sensorModule.gps.location.lng();
-  double gpsAltitude = sensorModule.gps.altitude.meters();
-  uint32_t gpsSatellites = sensorModule.gps.satellites.value();
-  communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude,
-                                                                        temperature,
-                                                                        voltage,
-                                                                        sensorModule.gps.location.lat(),
-                                                                        sensorModule.gps.location.lng(),
-                                                                        sensorModule.gps.altitude.meters(),
-                                                                        sensorModule.gps.satellites.value(),
-                                                                        sensorModule.gps.time.hour(),
-                                                                        sensorModule.gps.time.minute(),
-                                                                        sensorModule.gps.time.second()), 146);
+  createTelemetryPacketStr(altitude,
+                          temperature,
+                          voltage,
+                          0,
+                         0,
+                          0,
+                          0,
+                         0,
+                         0,
+                          0);
+  Serial.write(telPacketString, 133);
+  Serial.write('\n');
+
+  communicationModule.telemetryPacketQueue.add(telPacketString, 133);
 }
 
 bool constantAltitude(){
@@ -332,7 +329,7 @@ void loop() {
     lastMilis = currMillis;
   }
   
-  sensorModule.loop();
+//  sensorModule.loop();
   float altitude = simulationMode == SIMULATION_ACTIVATED ? sensorModule.getAltitudeFromPressure(latestSimulationPressureValue) : 700;
   latestAltitudes[latestAltitudesIndex++] = altitude;
   if (latestAltitudesIndex == ALTITUDE_LIST_LENGTH) latestAltitudesIndex = ALTITUDE_LIST_LENGTH;
