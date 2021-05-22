@@ -154,7 +154,6 @@ void ContainerCommunicationModule::manageGroundCommunication() {
   if (groundCommunicationState == STATE_IDLE && !telemetryPacketQueue.isEmpty()) {
     Serial.write("Sending ");
     sendNextTelemetryPacket();
-    groundCommunicationState = STATE_WAITING_FOR_GROUND_RESPONSE;
   }
 }
 

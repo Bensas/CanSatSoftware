@@ -75,7 +75,7 @@ bool sendTelemetry = false;
 uint8_t simulationMode = SIMULATION_DISABLED;
 mission_time_t sp1DeployTime = {};
 mission_time_t sp2DeployTime = {};
-uint8_t telPacketString[133];
+uint8_t telPacketString[137];
 uint8_t missionTimeStringBuffer[10];
 uint8_t gpsTimeStringBuffer[8];
 bool hasReachedApogee = false;
@@ -157,33 +157,33 @@ uint8_t* createTelemetryPacketStr(float altitude, float temp, float voltage, dou
    telPacketString[33] = ',';
    dtostrf(temp, 4, precision, telPacketString + 34);
    telPacketString[38] = ',';
-   dtostrf(voltage, 5, voltagePrecision, telPacketString + 39);
-   telPacketString[40] = ',';
-   memcpy(telPacketString + 41, getGpsTimeString(gpsHH, gpsMI, gpsSS), 8);
-   telPacketString[49] = ',';
-   dtostrf(gpsLat, 8, latLngPrecision, telPacketString + 50);
-   telPacketString[58] = ',';
-   dtostrf(gpsLng, 8, latLngPrecision, telPacketString + 59);
-   telPacketString[67] = ',';
-   dtostrf(gpsAltitude, 6, precision, telPacketString + 68);
-   telPacketString[74] = ',';
+   dtostrf(voltage, 4, voltagePrecision, telPacketString + 39);
+   telPacketString[43] = ',';
+   memcpy(telPacketString + 44, getGpsTimeString(gpsHH, gpsMI, gpsSS), 8);
+   telPacketString[53] = ',';
+   dtostrf(gpsLat, 8, latLngPrecision, telPacketString + 54);
+   telPacketString[62] = ',';
+   dtostrf(gpsLng, 8, latLngPrecision, telPacketString + 63);
+   telPacketString[71] = ',';
+   dtostrf(gpsAltitude, 6, precision, telPacketString + 72);
+   telPacketString[78] = ',';
    itoa(gpsSats, buffer, 10);
    bufferPadding =  4 - strlen(buffer);
-   memcpy(telPacketString + 75 + bufferPadding, buffer, strlen(buffer));
-   telPacketString[79] = ',';
-   memcpy(telPacketString + 80, STATE_STRING_ARRAY[currentState], 10);
-   telPacketString[90] = ',';
+   memcpy(telPacketString + 79 + bufferPadding, buffer, strlen(buffer));
+   telPacketString[83] = ',';
+   memcpy(telPacketString + 84, STATE_STRING_ARRAY[currentState], 10);
+   telPacketString[94] = ',';
    itoa(1280, buffer, 10); //sp1PacketCount
    bufferPadding =  4 - strlen(buffer);
-   memcpy(telPacketString + 91 + bufferPadding, buffer, strlen(buffer));
-   telPacketString[95] = ',';
+   memcpy(telPacketString + 95 + bufferPadding, buffer, strlen(buffer));
+   telPacketString[99] = ',';
    itoa(69, buffer, 10); //sp2PacketCount
    bufferPadding =  4 - strlen(buffer);
-   memcpy(telPacketString + 96 + bufferPadding, buffer, strlen(buffer));
-   telPacketString[107] = ',';
+   memcpy(telPacketString + 100 + bufferPadding, buffer, strlen(buffer));
+   telPacketString[111] = ',';
    uint8_t i = 0;
-   while (communicationModule.lastCommandEcho[i] != 0) telPacketString[108+i] = communicationModule.lastCommandEcho[i++];
-   telPacketString[108+i+1] = 0;
+   while (communicationModule.lastCommandEcho[i] != 0) telPacketString[112+i] = communicationModule.lastCommandEcho[i++];
+   telPacketString[112+i+1] = 0;
    return telPacketString;
 }
 
@@ -196,6 +196,8 @@ mission_time_t getMissionTime(uint8_t hh, uint8_t mi, uint8_t ss){
 
 uint8_t* generateMissionTimeString(){
   return getMissionTimeString(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond());
+//    return getMissionTimeString(0, 0, 0);
+
 }
 
 uint8_t* getMissionTimeString(uint8_t hh, uint8_t mi, uint8_t ss) { // Format HH:MM:SS
@@ -252,7 +254,6 @@ void setup() {
 
   groundXBeeSerial.begin(9600);
   payloadsXBeeSerial.begin(9600);
-  electromechanicalModule.resetServo();
 
 //  sensorModule.init();
 
@@ -274,7 +275,7 @@ void setup() {
   communicationModule.generateMissionTimeString = &generateMissionTimeString;
   communicationModule.init(groundXBeeSerial, payloadsXBeeSerial);
 
-  electromechanicalModule.init();
+//  electromechanicalModule.init();
 
   currentSec = seconds();
   lastMilis = millis();
@@ -298,8 +299,9 @@ uint8_t seconds(){
 void takeMeasurementsAndSendTelemetry(float altitude){
   float temperature = sensorModule.readTemperature();
   int voltageSensorValue = analogRead(A7);
-  float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
-  createTelemetryPacketStr(altitude,
+  float voltage = voltageSensorValue * (10.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
+  createTelemetryPacketStr
+  (altitude,
                           temperature,
                           voltage,
                           0,
@@ -309,10 +311,10 @@ void takeMeasurementsAndSendTelemetry(float altitude){
                          0,
                          0,
                           0);
-  Serial.write(telPacketString, 133);
+  Serial.write(telPacketString, 137);
   Serial.write('\n');
 
-  communicationModule.telemetryPacketQueue.add(telPacketString, 133);
+  communicationModule.telemetryPacketQueue.add(telPacketString, 137);
 }
 
 bool constantAltitude(){
@@ -332,7 +334,7 @@ void loop() {
   }
   
 //  sensorModule.loop();
-  float altitude = simulationMode == SIMULATION_ACTIVATED ? sensorModule.getAltitudeFromPressure(latestSimulationPressureValue) : 700;
+  float altitude = simulationMode == SIMULATION_ACTIVATED ? sensorModule.getAltitudeFromPressure(latestSimulationPressureValue) : sensorModule.readAltitude();
   latestAltitudes[latestAltitudesIndex++] = altitude;
   if (latestAltitudesIndex == ALTITUDE_LIST_LENGTH) latestAltitudesIndex = ALTITUDE_LIST_LENGTH;
   switch(currentState) {

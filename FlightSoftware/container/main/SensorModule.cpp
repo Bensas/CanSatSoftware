@@ -1,10 +1,10 @@
 #include "SensorModule.h"
 
-//Adafruit_BMP280 bmp280(BMP_CS, BMP_SDI, BMP_SDO,  BMP_SCK);
+Adafruit_BMP280 bmp280;
 SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
 
 void SensorModule::init() {
-  if (!bmp280.begin(BMP_280_S2C_ADDRESS)) {
+  if (!bmp280.begin(0x76)){
     Serial.write("Could not find a valid BMP280 sensor, check wiring!");
   }
   bmp280.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
@@ -29,14 +29,12 @@ void SensorModule::loop() {
 
 */
 float SensorModule::readAltitude() {
-  return 843.2;
-//  if (bmpBasePressureHPa == -1) bmpBasePressureHPa = bmp280.readPressure() / 100;
-//  return bmp280.readAltitude(bmpBasePressureHPa);
+  if (bmpBasePressureHPa == -1) bmpBasePressureHPa = bmp280.readPressure() / 100;
+  return bmp280.readAltitude(bmpBasePressureHPa);
 }
 
 float SensorModule::readTemperature() {
-  return 42;
-//  return bmp280.readTemperature();
+  return bmp280.readTemperature();
 }
 
 float SensorModule::getAltitudeFromPressure(float currentPa) {

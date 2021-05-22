@@ -9,6 +9,7 @@ class ElectromechanicalModule {
 
     void init(){
       servo.attach(SERVO_PIN); 
+//      resetServo();
     }
 
     void resetServo() {

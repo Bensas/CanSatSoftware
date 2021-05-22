@@ -9,12 +9,10 @@
 #define GPS_BAUD_RATE 9600
 
 // BMP280 pins
-#define BMP_280_S2C_ADDRESS 0x76
 
 class SensorModule {
   public:
   float bmpBasePressureHPa = -1;
-  Adafruit_BMP280 bmp280;
 //  TinyGPSPlus gps;
   
   void init();
