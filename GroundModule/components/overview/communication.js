@@ -3,8 +3,10 @@ var xbee_api = require('xbee-api');
 
 var C = xbee_api.constants;
 
-const GROUND_MAC_ADDRESS = '0013A2004191B826'; // This is actualy The Payload 2's MAC Address
-const CONTAINER_MAC_ADDRESS = '0013A2004191C55C'; // This is actualy The Payload 1's MAC Address
+const GROUND_MAC_ADDRESS = '0013A20041A7952C'; 
+const CONTAINER_MAC_ADDRESS = '0013A2004191B826';
+const PAYLOAD_1_MAC_ADDRESS = '0013A20041B118E0';
+const PAYLOAD_2_MAC_ADDRESS = '0013A2004191C55C';
 
 var sendSimData = false;
 var simCommands = getSimCommandListFromFile();
@@ -14,7 +16,7 @@ var xbeeAPI = new xbee_api.XBeeAPI({
   api_mode: 2
 });
 
-var serialport = new SerialPort("COM5", {
+var serialport = new SerialPort("COM3", {
   baudRate: 9600,
   parser: xbeeAPI.rawParser()
 });
@@ -78,21 +80,19 @@ function sendContainerSetTimeCommand(){
 function parsePacketAndAddValues(content) {
   const telemetryElements = content.split(',');
   if (telemetryElements.length === 19) { // Received container telemetry
-    addValueToTelemetryChart(containerTelemetryChartConfig, Number(telemetryElements[7]), telemetryElements[1]);
+    addValueToTelemetryChart(containerTelemetryChart, Number(telemetryElements[7]), telemetryElements[1]);
     addValueToTelemetryCsv(containerTelemetryWriteStream, content);
-  } else if (telemetryElements.length === 7) { // Received payload telemetry
+  } else { // Received payload telemetry
     if (telemetryElements[3] === 'S1') {
-      addValueToTelemetryChart(payload1TelemetryChartConfig, Number(telemetryElements[4]), telemetryElements[1]);
+      addValueToTelemetryChart(payload1TelemetryChart, Number(telemetryElements[4]), telemetryElements[1]);
       addValueToTelemetryCsv(payload1TelemetryWriteStream, content);
     } else if (telemetryElements[3] === 'S2') {
-      addValueToTelemetryChart(payload2TelemetryChartConfig, Number(telemetryElements[4]), telemetryElements[1]);
+
+      addValueToTelemetryChart(payload2TelemetryChart, Number(telemetryElements[4]), telemetryElements[1]);
       addValueToTelemetryCsv(payload2TelemetryWriteStream, content);
     } else {
       console.log('Received invalid payload telemetry packet:');
-      console.log(content);
+      console.log(telemetryElements[3]);
     }
-  } else {
-    console.log('Received invalid payload telemetry packet:');
-    console.log(content);
   }
 }
