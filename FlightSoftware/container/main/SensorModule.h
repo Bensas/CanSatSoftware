@@ -4,8 +4,8 @@
 #include <SoftwareSerial.h>
 
 //GPS pins
-#define GPS_RX 50
-#define GPS_TX 51
+#define GPS_RX 7
+#define GPS_TX 8
 #define GPS_BAUD_RATE 9600
 
 // BMP280 pins

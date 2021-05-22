@@ -56,7 +56,6 @@ void setPayloadTelemetryActivated(bool telemetryActivated) {
 uint8_t* createTelemetryPacketStr(float altitude, float temp, int rpm) {   
    uint8_t buffer[12];
    unsigned char precision = 1, voltagePrecision = 2, bufferPadding;
-   createZeroesString(telPacketString, 42);
    itoa(2764, telPacketString, 10);
    telPacketString[4] = ',';
    getMissionTimeString(0, 0, 0);
@@ -65,21 +64,31 @@ uint8_t* createTelemetryPacketStr(float altitude, float temp, int rpm) {
    
    itoa(communicationModule.packetCount, buffer, 10);
    bufferPadding =  4 - strlen(buffer);
+   uint8_t i = 14;
+   while (i< 14 + bufferPadding) telPacketString[i++] = '0';
    
    memcpy(telPacketString + 14 + bufferPadding, buffer, strlen(buffer));
    telPacketString[18] = ',';
    telPacketString[19] = 'S';
    telPacketString[20] = '1';
    telPacketString[21] = ',';
+   
    dtostrf(altitude, 6, precision, telPacketString + 22);
+   
    telPacketString[28] = ',';
+   
    dtostrf(temp, 4, precision, telPacketString + 29);
+   
    telPacketString[33] = ',';
+   
    itoa(rpm, buffer, 10);
    bufferPadding =  4 - strlen(buffer);
+   i = 34;
+   while (i< 34 + bufferPadding) telPacketString[i++] = '0';
+   
    memcpy(telPacketString + 34 + bufferPadding, buffer, strlen(buffer));
-   telPacketString[39] = 0;
-   Serial.write(telPacketString, 39);
+   telPacketString[38] = 0;
+   Serial.write(telPacketString, 38);
    Serial.write('\n');
    return telPacketString;
 }
@@ -140,7 +149,7 @@ void takeMeasurementsAndSendTelemetry(){
   float altitude = sensorModule.readAltitude();
   float temperature = sensorModule.readTemperature();
   int rpm = sensorModule.readGyroSpeed();
-  communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, rpm), 42);
+  communicationModule.telemetryPacketQueue.add(createTelemetryPacketStr(altitude, temperature, rpm), 38);
 }
 
 void loop() {
