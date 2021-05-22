@@ -252,6 +252,7 @@ void setup() {
 
   groundXBeeSerial.begin(9600);
   payloadsXBeeSerial.begin(9600);
+  electromechanicalModule.resetServo();
 
 //  sensorModule.init();
 
@@ -270,6 +271,7 @@ void setup() {
   communicationModule.setContainerSimulationMode = &setContainerSimulationMode;
   communicationModule.setLatestSimulationPressureValue = &setLatestSimulationPressureValue;
   communicationModule.setRtcTimeFromCommandPacket = &setRtcTimeFromCommandPacket;
+  communicationModule.generateMissionTimeString = &generateMissionTimeString;
   communicationModule.init(groundXBeeSerial, payloadsXBeeSerial);
 
   electromechanicalModule.init();
@@ -295,7 +297,7 @@ uint8_t seconds(){
 
 void takeMeasurementsAndSendTelemetry(float altitude){
   float temperature = sensorModule.readTemperature();
-  int voltageSensorValue = analogRead(A0);
+  int voltageSensorValue = analogRead(A7);
   float voltage = voltageSensorValue * (5.0 / 1023.0); // Convert the analog reading (which goes from 0 - 1023) to a voltage (0 - 5V):
   createTelemetryPacketStr(altitude,
                           temperature,
@@ -383,14 +385,14 @@ void switchToState(int8_t newState) {
     case STATE_PRE_DEPLOY:
       break;
     case STATE_PAYLOAD_1_DEPLOY:
-      electromechanicalModule.movePayload1Servo(180);
+      electromechanicalModule.releasePayload1();
       if (sp2DeployTime.hours == 0 && sp2DeployTime.minutes == 0 && sp2DeployTime.seconds == 0) {
         sp1DeployTime = getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond());
         EEPROM.put(SP1_DEPLOY_TIME_EEPROM_ADDR, sp1DeployTime);
       }
       break;
     case STATE_PAYLOAD_2_DEPLOY:
-      electromechanicalModule.movePayload2Servo(180);
+      electromechanicalModule.releasePayload2();
       if (sp2DeployTime.hours == 0 && sp2DeployTime.minutes == 0 && sp2DeployTime.seconds == 0) {
         sp2DeployTime = getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond());
         EEPROM.put(SP2_DEPLOY_TIME_EEPROM_ADDR, sp2DeployTime);

@@ -93,10 +93,12 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
 void ContainerCommunicationModule::parseTelemetryPacket(uint8_t* packetData, uint8_t packetLength) {
   if (packetData[20] == '1') {
     memcpy(latestPayload1Packet, packetData, packetLength);
+    memcpy(latestPayload1Packet + 5, generateMissionTimeString(), 8);
     telemetryPacketQueue.add(latestPayload1Packet, packetLength);
   }
   else if (packetData[20] == '2') {
     memcpy(latestPayload2Packet, packetData, packetLength);
+    memcpy(latestPayload2Packet + 5, generateMissionTimeString(), 8);
     telemetryPacketQueue.add(latestPayload2Packet, packetLength);
   }
 }

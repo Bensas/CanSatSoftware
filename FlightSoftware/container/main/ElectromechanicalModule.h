@@ -1,22 +1,23 @@
 #include <stdint.h>
 #include <Servo.h> 
 
-#define SERVO_1_PIN 4
-#define SERVO_2_PIN 5
+#define SERVO_PIN 2
 
 class ElectromechanicalModule {
-  Servo servo1;
-  Servo servo2;
+  Servo servo;
   public:
 
     void init(){
-      servo1.attach(SERVO_1_PIN); 
-      servo2.attach(SERVO_2_PIN); 
+      servo.attach(SERVO_PIN); 
     }
-    void movePayload1Servo(uint16_t degrees) {
-      servo1.write(degrees);
+
+    void resetServo() {
+      servo.write(90);
     }
-    void movePayload2Servo(uint16_t degrees) {
-      servo2.write(degrees);
+    void releasePayload1() {
+      servo.write(137);
+    }
+    void releasePayload2() {
+      servo.write(43);
     }
 };

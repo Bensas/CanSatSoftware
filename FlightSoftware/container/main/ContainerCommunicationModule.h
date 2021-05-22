@@ -46,6 +46,7 @@ class ContainerCommunicationModule : CommunicationModule {
     void (*setLatestSimulationPressureValue)(float pressureVal);
     void (*setContainerSimulationMode)(int newSimulationMode);
     void (*setRtcTimeFromCommandPacket)(uint8_t* packetData, uint8_t packetLength);
+    uint8_t (*generateMissionTimeString)();
 
     void ContainerCommunicationModule::init(SoftwareSerial& groundXBeeSerial, SoftwareSerial& payloadsXBeeSerial);
 
