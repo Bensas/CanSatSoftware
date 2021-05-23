@@ -13,7 +13,7 @@
 class SensorModule {
   public:
   float bmpBasePressureHPa = -1;
-//  TinyGPSPlus gps;
+  //TinyGPSPlus gps;
   
   void init();
   void loop();
