@@ -70,7 +70,7 @@ SoftwareSerial payloadsXBeeSerial(PAYLOADS_XBEE_RX_PIN, PAYLOADS_XBEE_TX_PIN);
 
 //State variables
 uint8_t currentState = STATE_STARTUP;
-bool sendTelemetry = false;
+bool sendTelemetry = true;
 uint8_t simulationMode = SIMULATION_DISABLED;
 mission_time_t sp1DeployTime = {};
 mission_time_t sp2DeployTime = {};
@@ -254,18 +254,25 @@ void setup() {
   groundXBeeSerial.begin(9600);
   payloadsXBeeSerial.begin(9600);
 
-//  sensorModule.init();
+  sensorModule.init();
 
   pinMode(BEACON_PIN_NUMBER, OUTPUT);
   Timer1.initialize(t); // period
   
   //Retrieve state variables from EEPROM
-  EEPROM.get(SEND_TELEMETRY_EEPROM_ADDR, sendTelemetry);
-  EEPROM.get(SIMULATION_MODE_EEPROM_ADDR, simulationMode);
-  EEPROM.get(CURRENT_STATE_EEPROM_ADDR, currentState);
-  EEPROM.get(SP1_DEPLOY_TIME_EEPROM_ADDR, sp1DeployTime);
-  EEPROM.get(SP2_DEPLOY_TIME_EEPROM_ADDR, sp2DeployTime);
-  EEPROM.get(HAS_REACHED_APOGEE_EEPROM_ADDR, hasReachedApogee);
+//  EEPROM.get(SEND_TELEMETRY_EEPROM_ADDR, sendTelemetry);
+//  EEPROM.get(SIMULATION_MODE_EEPROM_ADDR, simulationMode);
+//  EEPROM.get(CURRENT_STATE_EEPROM_ADDR, currentState);
+//  EEPROM.get(SP1_DEPLOY_TIME_EEPROM_ADDR, sp1DeployTime);
+//  EEPROM.get(SP2_DEPLOY_TIME_EEPROM_ADDR, sp2DeployTime);
+//  EEPROM.get(HAS_REACHED_APOGEE_EEPROM_ADDR, hasReachedApogee);
+  if (hasReachedApogee == 255) hasReachedApogee = false;  
+  
+
+  Serial.println(sendTelemetry);
+  Serial.println(simulationMode);
+  Serial.println(currentState);
+  Serial.println(hasReachedApogee);
 
   communicationModule.setContainerTelemetryActivated = &setContainerTelemetryActivated;
   communicationModule.setContainerSimulationMode = &setContainerSimulationMode;
@@ -291,8 +298,8 @@ void setup() {
 }
 
 uint8_t seconds(){
-  return millis() / 1000;
-//  return rtc.getSecond();
+  //return millis() / 1000;
+  return rtc.getSecond();
 }
 
 void takeMeasurementsAndSendTelemetry(float altitude){
@@ -335,7 +342,7 @@ void loop() {
 //  sensorModule.loop();
   float altitude = simulationMode == SIMULATION_ACTIVATED ? sensorModule.getAltitudeFromPressure(latestSimulationPressureValue) : sensorModule.readAltitude();
   latestAltitudes[latestAltitudesIndex++] = altitude;
-  if (latestAltitudesIndex == ALTITUDE_LIST_LENGTH) latestAltitudesIndex = ALTITUDE_LIST_LENGTH;
+  if (latestAltitudesIndex == ALTITUDE_LIST_LENGTH) latestAltitudesIndex = 0;
   switch(currentState) {
     case STATE_STARTUP:
       break;

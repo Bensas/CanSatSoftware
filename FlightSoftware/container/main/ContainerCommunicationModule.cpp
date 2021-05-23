@@ -140,7 +140,7 @@ void ContainerCommunicationModule::manageGroundCommunication() {
      }
   } else if (groundReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (groundRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
-      telemetryPacketQueue.removeHead();
+     
       Serial.println("Ack biatch");
       groundCommunicationState = STATE_IDLE;
     } else { //We got a status response but it wasn't an ACK, so we resend the packet
@@ -154,6 +154,7 @@ void ContainerCommunicationModule::manageGroundCommunication() {
   if (groundCommunicationState == STATE_IDLE && !telemetryPacketQueue.isEmpty()) {
     Serial.write("Sending ");
     sendNextTelemetryPacket();
+    telemetryPacketQueue.removeHead();
   }
 }
 
