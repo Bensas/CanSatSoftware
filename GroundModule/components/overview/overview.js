@@ -157,6 +157,10 @@ payload2TelemetryChart = new chartjs.Chart(payload2TelemetryCanvasCtx, payload2T
 function addValueToTelemetryChart(chart, value, label) {
   chart.data.datasets[0].data.push(value);
   chart.data.labels.push(label);
+  if (chart.data.labels.length > 20) {
+    chart.data.dataset[0].data.shift();
+    chart.data.labels.shift();
+  }
   console.log(chart);
   chart.update();
 }
@@ -167,7 +171,30 @@ function sendCustomCommand() {
 }
 
 function testAll() {
-  parsePacketAndAddValues('2764,00:01:32,10,C,F,N,N,700.2,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,0,0,CXON');
+  parsePacketAndAddValues('2764,00:01:32,10,C,F,N,N,700.2,18.2,8.98,20:54:33,42.30402,34.30402,699.3,3,STARTUP,42,43,CXON');
+  parsePacketAndAddValues('2764,00:00:00,0000,S1,   0.7,24.9,0000');
+  parsePacketAndAddValues('2764,00:00:00,0588,S2,  12.7,61.8,0000');
 }
 
 testAll();
+
+function setCurrentTemperature(id, temp) {
+  let elem = document.getElementById(id);
+  elem.innerHTML = 'Current temperature: ' + temp;
+}
+
+function setCurrentBatteryVoltage(id, volts) {
+  let elem = document.getElementById(id);
+  elem.innerHTML = 'Current battery voltage: ' + volts;
+}
+
+function setCurrentGPSCoords(id, lat, lng) {
+  let elem = document.getElementById(id);
+  elem.innerHTML = 'Current GPS coordinates: ' + lat + ', ' + lng;
+}
+
+function setCurrentRotationRate(id, rate) {
+  let elem = document.getElementById(id);
+  elem.innerHTML = 'Current rotation rate: ' + rate;
+}
+

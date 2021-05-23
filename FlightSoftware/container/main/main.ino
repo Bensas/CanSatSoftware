@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <Wire.h>
 #include <EEPROM.h>
-#include <avr/pgmspace.h>
 #include <DS3231.h>
 #include <TimerOne.h>
 
@@ -46,11 +45,11 @@
 
 unsigned long t=366.3,k=512;// default 1000 μs (1000 Hz), meander, pulse duration is equal to duty cycle k = 512 (50%)
 
-static const uint8_t startupStr[10] PROGMEM = {'_', 'S', 'T', 'A', 'R', 'T', 'U', 'P', '_', '_'};
-static const uint8_t predeploStr[10] PROGMEM = {'P', 'R', 'E', '_', 'D', 'E', 'P', 'L', 'O', 'Y'};
-static const uint8_t p1DeployedStr[10] PROGMEM = {'P', '1', 'D', 'E', 'P', 'L', 'O', 'Y', 'E', 'D'};
-static const uint8_t p2DeployedStr[10] PROGMEM = {'P', '2', 'D', 'E', 'P', 'L', 'O', 'Y', 'E', 'D'};
-static const uint8_t landedStr[10] PROGMEM = {'_', '_', 'L', 'A', 'N', 'D', 'E', 'D', '_', '_'};
+static const uint8_t startupStr[10] = {'_', 'S', 'T', 'A', 'R', 'T', 'U', 'P', '_', '_'};
+static const uint8_t predeploStr[10] = {'P', 'R', 'E', '_', 'D', 'E', 'P', 'L', 'O', 'Y'};
+static const uint8_t p1DeployedStr[10] = {'P', '1', 'D', 'E', 'P', 'L', 'O', 'Y', 'E', 'D'};
+static const uint8_t p2DeployedStr[10] = {'P', '2', 'D', 'E', 'P', 'L', 'O', 'Y', 'E', 'D'};
+static const uint8_t landedStr[10] = {'_', '_', 'L', 'A', 'N', 'D', 'E', 'D', '_', '_'};
 
 uint8_t* STATE_STRING_ARRAY[5] = {startupStr, predeploStr, p1DeployedStr, p2DeployedStr, landedStr};
 
