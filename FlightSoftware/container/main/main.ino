@@ -10,7 +10,7 @@
 
 //External Component pins
 
-#define BEACON_PIN_NUMBER 9//buzzer to arduino pin 9
+#define BEACON_PIN_NUMBER 10//buzzer to arduino pin 9
 
 #define GROUND_XBEE_RX_PIN 3
 #define GROUND_XBEE_TX_PIN 4
@@ -82,7 +82,7 @@ bool hasReachedApogee = false;
 float latestAltitudes[ALTITUDE_LIST_LENGTH];
 uint8_t latestAltitudesIndex = 0;
 
-float latestSimulationPressureValue = 0;
+float latestSimulationPressureValue = -1;
 
 //RTC DS3231 info variables
 bool H12, PM, CENTURY;
@@ -106,6 +106,8 @@ void setLatestSimulationPressureValue(float pressureVal) {
 
 void setContainerSimulationMode(uint8_t newSimulationMode) {
   simulationMode = newSimulationMode;
+  if (newSimulationMode == SIMULATION_ACTIVATED)
+    sensorModule.bmpBasePressureHPa = -1;
 }
 
 void setRtcTimeFromCommandPacket(uint8_t* packetData, uint8_t packetLength) {
@@ -251,8 +253,8 @@ void setup() {
   Serial.begin(19200);
   Wire.begin();
 
-  groundXBeeSerial.begin(9600);
-  payloadsXBeeSerial.begin(9600);
+  groundXBeeSerial.begin(19200);
+//  payloadsXBeeSerial.begin(9600);
 
   sensorModule.init();
 
@@ -317,8 +319,8 @@ void takeMeasurementsAndSendTelemetry(float altitude){
                          0,
                          0,
                           0);
-  Serial.write(telPacketString, 137);
-  Serial.write('\n');
+//  Serial.write(telPacketString, 137);
+//  Serial.write('\n');
 
   communicationModule.telemetryPacketQueue.add(telPacketString, 137);
 }

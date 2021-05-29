@@ -1,6 +1,6 @@
 #include "ContainerCommunicationModule.h"
 
-void ContainerCommunicationModule::init(SoftwareSerial& groundXBeeSerial, SoftwareSerial& payloadsXBeeSerial) {
+void ContainerCommunicationModule::init(SoftwareSerial& groundXBeeSerial, Stream& payloadsXBeeSerial) {
   // Start the serial port
   groundXBee.setSerial(groundXBeeSerial);
   payloadsXBee.setSerial(payloadsXBeeSerial);
@@ -51,11 +51,11 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
       }
     } else { //SIMP command
       uint8_t pressureValueBuffer[8];
-      uint8_t i;
+      uint8_t i = 0;
+      while (i < 8)pressureValueBuffer[i++]=0;
       for (i = 14; i < packetLength; i++) {
         pressureValueBuffer[i-14] = packetData[i];
       }
-      Serial.write("SIMP\n");
       pressureValueBuffer[i] = 0;
       setLatestSimulationPressureValue(atof(pressureValueBuffer));
     }
@@ -123,8 +123,9 @@ void ContainerCommunicationModule::sendNextTelemetryPacket(){
 }
 
 void ContainerCommunicationModule::loop() {
+//  groundXBeeSerial.listen()
   manageGroundCommunication();
-  managePayloadsCommunication();
+//  managePayloadsCommunication();
 }
 
 void ContainerCommunicationModule::manageGroundCommunication() {
@@ -140,7 +141,6 @@ void ContainerCommunicationModule::manageGroundCommunication() {
      }
   } else if (groundReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (groundRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
-     
       Serial.println("Ack biatch");
       groundCommunicationState = STATE_IDLE;
     } else { //We got a status response but it wasn't an ACK, so we resend the packet
@@ -171,6 +171,7 @@ void ContainerCommunicationModule::managePayloadsCommunication() {
     // }
   } else if (payloadsReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (payloadsRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
+      Serial.println("Packet ack");
       switch (payloadCommunicationState) {
         case STATE_WAITING_FOR_PAYLOAD_1_RESPONSE:
           payload1CommandQueue.removeHead();
