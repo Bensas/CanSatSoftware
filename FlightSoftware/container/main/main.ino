@@ -325,12 +325,18 @@ void takeMeasurementsAndSendTelemetry(float altitude){
   communicationModule.telemetryPacketQueue.add(telPacketString, 137);
 }
 
-bool constantAltitude(){
-  float totalDelta = 0;
+bool constantLowAltitude(){
+  float max = latestAltitudes[0];
+  float min = latestAltitudes[0];
   for (int i = 1; i < ALTITUDE_LIST_LENGTH; i++) {
-    totalDelta += latestAltitudes[i] - latestAltitudes[i-1];
+    if (latestAltitudes[i] < min) min = latestAltitudes[i];
+    if (latestAltitudes[i] < max) max = latestAltitudes[i];
   }
-  return totalDelta < 3;
+  Serial.println("Max - min:");
+  Serial.println(max - min);
+  Serial.println("Max:");
+  Serial.println(max);
+  return max - min < 5 && max < 5;
 }
 
 void loop() {
@@ -343,8 +349,14 @@ void loop() {
   
 //  sensorModule.loop();
   float altitude = simulationMode == SIMULATION_ACTIVATED ? sensorModule.getAltitudeFromPressure(latestSimulationPressureValue) : sensorModule.readAltitude();
-  latestAltitudes[latestAltitudesIndex++] = altitude;
-  if (latestAltitudesIndex == ALTITUDE_LIST_LENGTH) latestAltitudesIndex = 0;
+  if (hasReachedApogee && abs(latestAltitudes[latestAltitudesIndex] - altitude) > 95 ) { //Check for sensor glitches, if the difference in altitudes is too big, we ignore the new altitude.
+     altitude = latestAltitudes[latestAltitudesIndex];
+     Serial.println(altitude);
+  } else {
+    latestAltitudes[latestAltitudesIndex++] = altitude;
+    if (latestAltitudesIndex == ALTITUDE_LIST_LENGTH) latestAltitudesIndex = 0;
+  }
+  
   switch(currentState) {
     case STATE_STARTUP:
       break;
@@ -353,8 +365,10 @@ void loop() {
           currentSec = rtcSeconds;
           takeMeasurementsAndSendTelemetry(altitude);
       }
-      if (!hasReachedApogee && altitude > 500)
-          hasReachedApogee = true;
+      if (!hasReachedApogee && altitude > 650){
+            hasReachedApogee = true;
+            Serial.println("Apogee reached");
+      }
       else if (hasReachedApogee && altitude < 500)
         switchToState(STATE_PAYLOAD_1_DEPLOY);
       break;
@@ -364,8 +378,11 @@ void loop() {
           takeMeasurementsAndSendTelemetry(altitude);
       }
      
-      if (altitude < 400)
+      if (altitude < 400){
+        Serial.println("Switching again :P");
+        Serial.println(altitude);
         switchToState(STATE_PAYLOAD_2_DEPLOY);
+      }
 
       break;
       
@@ -375,7 +392,7 @@ void loop() {
           takeMeasurementsAndSendTelemetry(altitude);
       }
      
-      if (constantAltitude())
+      if (constantLowAltitude())
         switchToState(STATE_LANDED);
   
       break;
@@ -390,6 +407,7 @@ void loop() {
 
 void switchToState(int8_t newState) {
   currentState = newState;
+  Serial.println(newState);
   EEPROM.put(CURRENT_STATE_EEPROM_ADDR, currentState);
   switch(newState) {
     case STATE_PRE_DEPLOY:
