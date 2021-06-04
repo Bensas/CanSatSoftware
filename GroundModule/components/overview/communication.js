@@ -59,22 +59,34 @@ setInterval(()=> {
   }
 }, 1000);
 
+function toggleSendSimData() {
+  sendSimData = !sendSimData;
+  document.getElementById('sim-on-indicator').style.display = sendSimData ? 'block' : 'none';
+  document.getElementById('sim-off-indicator').style.display = sendSimData ? 'none' : 'block';
+  console.log('SIM activated: ' + sendSimData);
+  if (sendSimData) currentSimCommandIndex = 0;
+}
+
 function sendCommand(cmdData) {
   var frame = {
     type: C.FRAME_TYPE.ZIGBEE_TRANSMIT_REQUEST,
     destination64: CONTAINER_MAC_ADDRESS,
     data: cmdData
   };
+  console.log("Sending command " + cmdData);
   serialport.write(xbeeAPI.buildFrame(frame), function(err, res) {
     if (err) throw(err);
-    else     console.log(res);
+    else console.log(res);
   });
 }
 
 function sendContainerSetTimeCommand(){
+  sendCommand('CMD,ST,' + getUtcTimeStr());
+}
+
+function getUtcTimeStr() {
   const date = new Date();
-  const utcTimeStr = date.toUTCString().split(" ")[4];
-  sendCommand('CMD,ST,' + utcTimeStr);
+  return date.toUTCString().split(" ")[4];
 }
 
 function parsePacketAndAddValues(content) {
@@ -88,6 +100,7 @@ function parsePacketAndAddValues(content) {
     publishMQTTMessage(content);
   } else { // Received payload telemetry
     if (telemetryElements[3] === 'S1') {
+      telemetryElements[1] = getUtcTimeStr();
       addValueToTelemetryChart(payload1TelemetryChart, Number(telemetryElements[4]), telemetryElements[1]);
       addValueToTelemetryCsv(payload1TelemetryWriteStream, content);
       setCurrentTemperature('payload-1-telemetry-temperature', telemetryElements[5]);

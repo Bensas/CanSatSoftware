@@ -158,7 +158,7 @@ function addValueToTelemetryChart(chart, value, label) {
   chart.data.datasets[0].data.push(value);
   chart.data.labels.push(label);
   if (chart.data.labels.length > 20) {
-    chart.data.dataset[0].data.shift();
+    chart.data.datasets[0].data.shift();
     chart.data.labels.shift();
   }
   console.log(chart);
@@ -176,7 +176,7 @@ function testAll() {
   parsePacketAndAddValues('2764,00:00:00,0588,S2,  12.7,61.8,0000');
 }
 
-testAll();
+//testAll();
 
 function setCurrentTemperature(id, temp) {
   let elem = document.getElementById(id);

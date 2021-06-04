@@ -13,6 +13,7 @@
             <div class="column">
                 <h3>Container Commands</h3>
                 <button onclick="sendCommand('CMD,2764,CX,ON')">Start Container Telemetry</button>
+                <button onclick="sendCommand('CMD,2764,CX,OFF')">Stop Container Telemetry</button>
                 <button onclick="sendCommand('CMD,2764,SP1X,ON')">Start P1 Telemetry</button>
                 <button onclick="sendCommand('CMD,2764,SP2X,ON')">Start P2 Telemetry</button>
                 <button onclick="sendContainerSetTimeCommand()">Set current container time</button>
@@ -24,7 +25,7 @@
             </div>
             <div class="column">
                 <h3>Ground controls</h3>
-                <button onclick="beginSendSimData()">Begin send SIM data</button>
+                <button onclick="toggleSendSimData()">Begin send SIM data</button>
                 <button onclick="toggleMQTTActivated()">Activate/Deactivate MQTT</button>
             </div>
         </div>
