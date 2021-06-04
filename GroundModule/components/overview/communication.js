@@ -80,6 +80,32 @@ function sendCommand(cmdData) {
   });
 }
 
+sendCommandToP1(cmdData) {
+  var frame = {
+    type: C.FRAME_TYPE.ZIGBEE_TRANSMIT_REQUEST,
+    destination64: PAYLOAD_1_MAC_ADDRESS,
+    data: cmdData
+  };
+  console.log("Sending command to payload 1:" + cmdData);
+  serialport.write(xbeeAPI.buildFrame(frame), function(err, res) {
+    if (err) throw(err);
+    else console.log(res);
+  });
+}
+
+sendCommandToP2(cmdData) {
+  var frame = {
+    type: C.FRAME_TYPE.ZIGBEE_TRANSMIT_REQUEST,
+    destination64: PAYLOAD_2_MAC_ADDRESS,
+    data: cmdData
+  };
+  console.log("Sending command to payload 2: " + cmdData);
+  serialport.write(xbeeAPI.buildFrame(frame), function(err, res) {
+    if (err) throw(err);
+    else console.log(res);
+  });
+}
+
 function sendContainerSetTimeCommand(){
   sendCommand('CMD,ST,' + getUtcTimeStr());
 }
