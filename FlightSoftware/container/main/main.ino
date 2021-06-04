@@ -10,7 +10,7 @@
 
 //External Component pins
 
-#define BEACON_PIN_NUMBER 9//buzzer to arduino pin 9
+#define BEACON_PIN_NUMBER 10//buzzer to arduino pin 9
 
 #define GROUND_XBEE_RX_PIN 3
 #define GROUND_XBEE_TX_PIN 4
@@ -70,7 +70,7 @@ SoftwareSerial payloadsXBeeSerial(PAYLOADS_XBEE_RX_PIN, PAYLOADS_XBEE_TX_PIN);
 
 //State variables
 uint8_t currentState = STATE_STARTUP;
-bool sendTelemetry = false;
+bool sendTelemetry = true;
 uint8_t simulationMode = SIMULATION_DISABLED;
 mission_time_t sp1DeployTime = {};
 mission_time_t sp2DeployTime = {};
@@ -82,7 +82,7 @@ bool hasReachedApogee = false;
 float latestAltitudes[ALTITUDE_LIST_LENGTH];
 uint8_t latestAltitudesIndex = 0;
 
-float latestSimulationPressureValue = 0;
+float latestSimulationPressureValue = -1;
 
 //RTC DS3231 info variables
 bool H12, PM, CENTURY;
@@ -106,6 +106,8 @@ void setLatestSimulationPressureValue(float pressureVal) {
 
 void setContainerSimulationMode(uint8_t newSimulationMode) {
   simulationMode = newSimulationMode;
+  if (newSimulationMode == SIMULATION_ACTIVATED)
+    sensorModule.bmpBasePressureHPa = -1;
 }
 
 void setRtcTimeFromCommandPacket(uint8_t* packetData, uint8_t packetLength) {
@@ -251,21 +253,28 @@ void setup() {
   Serial.begin(19200);
   Wire.begin();
 
-  groundXBeeSerial.begin(9600);
-  payloadsXBeeSerial.begin(9600);
+  groundXBeeSerial.begin(19200);
+//  payloadsXBeeSerial.begin(9600);
 
-//  sensorModule.init();
+  sensorModule.init();
 
   pinMode(BEACON_PIN_NUMBER, OUTPUT);
   Timer1.initialize(t); // period
   
   //Retrieve state variables from EEPROM
-  EEPROM.get(SEND_TELEMETRY_EEPROM_ADDR, sendTelemetry);
-  EEPROM.get(SIMULATION_MODE_EEPROM_ADDR, simulationMode);
-  EEPROM.get(CURRENT_STATE_EEPROM_ADDR, currentState);
-  EEPROM.get(SP1_DEPLOY_TIME_EEPROM_ADDR, sp1DeployTime);
-  EEPROM.get(SP2_DEPLOY_TIME_EEPROM_ADDR, sp2DeployTime);
-  EEPROM.get(HAS_REACHED_APOGEE_EEPROM_ADDR, hasReachedApogee);
+//  EEPROM.get(SEND_TELEMETRY_EEPROM_ADDR, sendTelemetry);
+//  EEPROM.get(SIMULATION_MODE_EEPROM_ADDR, simulationMode);
+//  EEPROM.get(CURRENT_STATE_EEPROM_ADDR, currentState);
+//  EEPROM.get(SP1_DEPLOY_TIME_EEPROM_ADDR, sp1DeployTime);
+//  EEPROM.get(SP2_DEPLOY_TIME_EEPROM_ADDR, sp2DeployTime);
+//  EEPROM.get(HAS_REACHED_APOGEE_EEPROM_ADDR, hasReachedApogee);
+  if (hasReachedApogee == 255) hasReachedApogee = false;  
+  
+
+  Serial.println(sendTelemetry);
+  Serial.println(simulationMode);
+  Serial.println(currentState);
+  Serial.println(hasReachedApogee);
 
   communicationModule.setContainerTelemetryActivated = &setContainerTelemetryActivated;
   communicationModule.setContainerSimulationMode = &setContainerSimulationMode;
@@ -291,8 +300,8 @@ void setup() {
 }
 
 uint8_t seconds(){
-  return millis() / 1000;
-//  return rtc.getSecond();
+  //return millis() / 1000;
+  return rtc.getSecond();
 }
 
 void takeMeasurementsAndSendTelemetry(float altitude){
@@ -310,18 +319,24 @@ void takeMeasurementsAndSendTelemetry(float altitude){
                          0,
                          0,
                           0);
-  Serial.write(telPacketString, 137);
-  Serial.write('\n');
+//  Serial.write(telPacketString, 137);
+//  Serial.write('\n');
 
   communicationModule.telemetryPacketQueue.add(telPacketString, 137);
 }
 
-bool constantAltitude(){
-  float totalDelta = 0;
+bool constantLowAltitude(){
+  float max = latestAltitudes[0];
+  float min = latestAltitudes[0];
   for (int i = 1; i < ALTITUDE_LIST_LENGTH; i++) {
-    totalDelta += latestAltitudes[i] - latestAltitudes[i-1];
+    if (latestAltitudes[i] < min) min = latestAltitudes[i];
+    if (latestAltitudes[i] < max) max = latestAltitudes[i];
   }
-  return totalDelta < 3;
+  Serial.println("Max - min:");
+  Serial.println(max - min);
+  Serial.println("Max:");
+  Serial.println(max);
+  return max - min < 5 && max < 5;
 }
 
 void loop() {
@@ -334,8 +349,14 @@ void loop() {
   
 //  sensorModule.loop();
   float altitude = simulationMode == SIMULATION_ACTIVATED ? sensorModule.getAltitudeFromPressure(latestSimulationPressureValue) : sensorModule.readAltitude();
-  latestAltitudes[latestAltitudesIndex++] = altitude;
-  if (latestAltitudesIndex == ALTITUDE_LIST_LENGTH) latestAltitudesIndex = ALTITUDE_LIST_LENGTH;
+  if (hasReachedApogee && abs(latestAltitudes[latestAltitudesIndex] - altitude) > 95 ) { //Check for sensor glitches, if the difference in altitudes is too big, we ignore the new altitude.
+     altitude = latestAltitudes[latestAltitudesIndex];
+     Serial.println(altitude);
+  } else {
+    latestAltitudes[latestAltitudesIndex++] = altitude;
+    if (latestAltitudesIndex == ALTITUDE_LIST_LENGTH) latestAltitudesIndex = 0;
+  }
+  
   switch(currentState) {
     case STATE_STARTUP:
       break;
@@ -344,8 +365,10 @@ void loop() {
           currentSec = rtcSeconds;
           takeMeasurementsAndSendTelemetry(altitude);
       }
-      if (!hasReachedApogee && altitude > 500)
-          hasReachedApogee = true;
+      if (!hasReachedApogee && altitude > 650){
+            hasReachedApogee = true;
+            Serial.println("Apogee reached");
+      }
       else if (hasReachedApogee && altitude < 500)
         switchToState(STATE_PAYLOAD_1_DEPLOY);
       break;
@@ -355,8 +378,11 @@ void loop() {
           takeMeasurementsAndSendTelemetry(altitude);
       }
      
-      if (altitude < 400)
+      if (altitude < 400){
+        Serial.println("Switching again :P");
+        Serial.println(altitude);
         switchToState(STATE_PAYLOAD_2_DEPLOY);
+      }
 
       break;
       
@@ -366,7 +392,7 @@ void loop() {
           takeMeasurementsAndSendTelemetry(altitude);
       }
      
-      if (constantAltitude())
+      if (constantLowAltitude())
         switchToState(STATE_LANDED);
   
       break;
@@ -381,6 +407,7 @@ void loop() {
 
 void switchToState(int8_t newState) {
   currentState = newState;
+  Serial.println(newState);
   EEPROM.put(CURRENT_STATE_EEPROM_ADDR, currentState);
   switch(newState) {
     case STATE_PRE_DEPLOY:

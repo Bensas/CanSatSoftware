@@ -15,7 +15,7 @@ void SensorModule::init() {
   bmpBasePressureHPa = bmp280.readPressure() / 100;
 
   // GPS SETUP
-  gpsSerial.begin(GPS_BAUD_RATE);
+  //gpsSerial.begin(GPS_BAUD_RATE);
 }
 
 void SensorModule::loop() {
@@ -29,7 +29,8 @@ void SensorModule::loop() {
 
 */
 float SensorModule::readAltitude() {
-  if (bmpBasePressureHPa == -1) bmpBasePressureHPa = bmp280.readPressure() / 100;
+//  if (bmpBasePressureHPa == -1) bmpBasePressureHPa = bmp280.readPressure() / 100;
+//  Serial.println(bmpBasePressureHPa);
   return bmp280.readAltitude(bmpBasePressureHPa);
 }
 
@@ -38,10 +39,11 @@ float SensorModule::readTemperature() {
 }
 
 float SensorModule::getAltitudeFromPressure(float currentPa) {
+  if (currentPa == -1) return 0;
   if (bmpBasePressureHPa == -1)
     bmpBasePressureHPa = currentPa / 100;
+    
   float pressure = currentPa; // in Si units for Pascal
   pressure /= 100;
-
-  return 44330 * (1.0 - pow(pressure / bmpBasePressureHPa, 0.1903));
+  return 44330 * (1 - pow(pressure / bmpBasePressureHPa, 0.1903));
 }
