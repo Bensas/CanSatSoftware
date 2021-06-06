@@ -3,13 +3,13 @@
 void ContainerCommunicationModule::init(SoftwareSerial& groundXBeeSerial, Stream& payloadsXBeeSerial) {
   // Start the serial port
   groundXBee.setSerial(groundXBeeSerial);
-  payloadsXBee.setSerial(payloadsXBeeSerial);
+//  payloadsXBee.setSerial(payloadsXBeeSerial);
   Serial.begin(19200);
-  EEPROM.get(PACKET_COUNT_EEPROM_ADDR, packetCount);
+//  EEPROM.get(PACKET_COUNT_EEPROM_ADDR, packetCount);
 }
 
 void ContainerCommunicationModule::parseReceivedPacket(uint8_t* packetData, uint8_t packetLength) {
-  Serial.write("Parsing received packet:");
+  Serial.write("Parse:");
   Serial.write(packetData, packetLength);
   Serial.write("\n");
   if (packetData[0] == 'C') {
@@ -38,15 +38,15 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
   else if (packetData[9] == 'S' && packetData[10] == 'I') { //SIM or SIMP command
     if (packetData[12] == ',') { //SIM command
       if (packetData[13] =='D') {
-        Serial.write("SIMD\n");
+//        Serial.write("SIMD\n");
         setContainerSimulationMode(SIMULATION_DISABLED);
       }
       else if (packetData[13] =='E') {
-        Serial.write("SIME\n");
+//        Serial.write("SIME\n");
         setContainerSimulationMode(SIMULATION_ENABLED);
       }
       else {
-        Serial.write("SIMA\n");
+//        Serial.write("SIMA\n");
         setContainerSimulationMode(SIMULATION_ACTIVATED);
       }
     } else { //SIMP command
@@ -63,18 +63,18 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
   else if (packetData[9] == 'S' && packetData[10] == 'P') { //SP1X or SP2X command
     if (packetData[14] == 'O' && packetData[15] == 'N'){
       if (packetData[11] == '1') {
-        Serial.write("SP1XON\n");
+//        Serial.write("SP1XON\n");
         payload1CommandQueue.add('1');
       } else {
-        Serial.write("SP2XON\n");
+//        Serial.write("SP2XON\n");
         payload2CommandQueue.add('1');
       }
     } else {
       if (packetData[11] == '1') {
-        Serial.write("SP1XOFF\n");
+//        Serial.write("SP1XOFF\n");
         payload1CommandQueue.add('0');
       } else {
-        Serial.write("SP2XOFF\n");
+//        Serial.write("SP2XOFF\n");
         payload2CommandQueue.add('0');
       }
     }
@@ -152,7 +152,7 @@ void ContainerCommunicationModule::manageGroundCommunication() {
 //      Serial.write("No response");
   }
   if (groundCommunicationState == STATE_IDLE && !telemetryPacketQueue.isEmpty()) {
-    Serial.write("Sending ");
+    Serial.write("Send:");
     sendNextTelemetryPacket();
     telemetryPacketQueue.removeHead();
   }
@@ -171,7 +171,7 @@ void ContainerCommunicationModule::managePayloadsCommunication() {
     // }
   } else if (payloadsReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (payloadsRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
-      Serial.println("Packet ack");
+      Serial.println("ack");
       switch (payloadCommunicationState) {
         case STATE_WAITING_FOR_PAYLOAD_1_RESPONSE:
           payload1CommandQueue.removeHead();

@@ -10,12 +10,12 @@
 
 //External Component pins
 
-#define BEACON_PIN_NUMBER 10//buzzer to arduino pin 9
+#define BEACON_PIN_NUMBER 9//buzzer to arduino pin 9
 
-#define GROUND_XBEE_RX_PIN 3
+#define GROUND_XBEE_RX_PIN 2
 #define GROUND_XBEE_TX_PIN 4
-#define PAYLOADS_XBEE_RX_PIN 5
-#define PAYLOADS_XBEE_TX_PIN 6
+//#define PAYLOADS_XBEE_RX_PIN 5
+//#define PAYLOADS_XBEE_TX_PIN 6
 
 //Enums
 #define STATE_STARTUP 0
@@ -66,7 +66,7 @@ DS3231 rtc;
 
 // The serial connection to the GPS device
 SoftwareSerial groundXBeeSerial(GROUND_XBEE_RX_PIN, GROUND_XBEE_TX_PIN);
-SoftwareSerial payloadsXBeeSerial(PAYLOADS_XBEE_RX_PIN, PAYLOADS_XBEE_TX_PIN);
+//SoftwareSerial payloadsXBeeSerial(PAYLOADS_XBEE_RX_PIN, PAYLOADS_XBEE_TX_PIN);
 
 //State variables
 uint8_t currentState = STATE_STARTUP;
@@ -174,11 +174,11 @@ uint8_t* createTelemetryPacketStr(float altitude, float temp, float voltage, dou
    telPacketString[83] = ',';
    memcpy(telPacketString + 84, STATE_STRING_ARRAY[currentState], 10);
    telPacketString[94] = ',';
-   itoa(1280, buffer, 10); //sp1PacketCount
+   itoa(42, buffer, 10); //sp1PacketCount
    bufferPadding =  4 - strlen(buffer);
    memcpy(telPacketString + 95 + bufferPadding, buffer, strlen(buffer));
    telPacketString[99] = ',';
-   itoa(69, buffer, 10); //sp2PacketCount
+   itoa(42, buffer, 10); //sp2PacketCount
    bufferPadding =  4 - strlen(buffer);
    memcpy(telPacketString + 100 + bufferPadding, buffer, strlen(buffer));
    telPacketString[111] = ',';
@@ -253,7 +253,7 @@ void setup() {
   Serial.begin(19200);
   Wire.begin();
 
-  groundXBeeSerial.begin(19200);
+  groundXBeeSerial.begin(9600);
 //  payloadsXBeeSerial.begin(9600);
 
   sensorModule.init();
@@ -281,9 +281,9 @@ void setup() {
   communicationModule.setLatestSimulationPressureValue = &setLatestSimulationPressureValue;
   communicationModule.setRtcTimeFromCommandPacket = &setRtcTimeFromCommandPacket;
   communicationModule.generateMissionTimeString = &generateMissionTimeString;
-  communicationModule.init(groundXBeeSerial, payloadsXBeeSerial);
+  communicationModule.init(groundXBeeSerial, groundXBeeSerial);
 
-//  electromechanicalModule.init();
+  electromechanicalModule.init();
 
   currentSec = seconds();
   lastMilis = millis();
@@ -312,8 +312,10 @@ void takeMeasurementsAndSendTelemetry(float altitude){
   (altitude,
                           temperature,
                           voltage,
+//                          sensorModule.gps.location.lat(),
+//                          sensorModule.gps.location.lng(),
                           0,
-                         0,
+                          0,
                           0,
                           0,
                          0,
@@ -347,9 +349,9 @@ void loop() {
     lastMilis = currMillis;
   }
   
-//  sensorModule.loop();
+  sensorModule.loop();
   float altitude = simulationMode == SIMULATION_ACTIVATED ? sensorModule.getAltitudeFromPressure(latestSimulationPressureValue) : sensorModule.readAltitude();
-  if (hasReachedApogee && abs(latestAltitudes[latestAltitudesIndex] - altitude) > 95 ) { //Check for sensor glitches, if the difference in altitudes is too big, we ignore the new altitude.
+  if (hasReachedApogee && (abs(latestAltitudes[latestAltitudesIndex] - altitude) > 95 || altitude > latestAltitudes[latestAltitudesIndex])) { //Check for sensor glitches, if the difference in altitudes is too big, we ignore the new altitude.
      altitude = latestAltitudes[latestAltitudesIndex];
      Serial.println(altitude);
   } else {
@@ -364,10 +366,16 @@ void loop() {
       if (sendTelemetry == true && rtcSeconds != currentSec) {
           currentSec = rtcSeconds;
           takeMeasurementsAndSendTelemetry(altitude);
+          if (rtcSeconds % 2) {
+            electromechanicalModule.releasePayload1();
+          } else {
+            electromechanicalModule.resetServo();
+          }
       }
       if (!hasReachedApogee && altitude > 650){
             hasReachedApogee = true;
             Serial.println("Apogee reached");
+            Serial.println(altitude);
       }
       else if (hasReachedApogee && altitude < 500)
         switchToState(STATE_PAYLOAD_1_DEPLOY);
@@ -379,7 +387,6 @@ void loop() {
       }
      
       if (altitude < 400){
-        Serial.println("Switching again :P");
         Serial.println(altitude);
         switchToState(STATE_PAYLOAD_2_DEPLOY);
       }
@@ -413,6 +420,7 @@ void switchToState(int8_t newState) {
     case STATE_PRE_DEPLOY:
       break;
     case STATE_PAYLOAD_1_DEPLOY:
+      Serial.println("Tuvi");
       electromechanicalModule.releasePayload1();
       if (sp2DeployTime.hours == 0 && sp2DeployTime.minutes == 0 && sp2DeployTime.seconds == 0) {
         sp1DeployTime = getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond());
@@ -420,6 +428,7 @@ void switchToState(int8_t newState) {
       }
       break;
     case STATE_PAYLOAD_2_DEPLOY:
+          Serial.println("Tuvi2");
       electromechanicalModule.releasePayload2();
       if (sp2DeployTime.hours == 0 && sp2DeployTime.minutes == 0 && sp2DeployTime.seconds == 0) {
         sp2DeployTime = getMissionTime(rtc.getHour(H12, PM), rtc.getMinute(), rtc.getSecond());

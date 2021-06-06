@@ -1,11 +1,10 @@
 #include "SensorModule.h"
 
 Adafruit_BMP280 bmp280;
-SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
 
 void SensorModule::init() {
   if (!bmp280.begin(0x76)){
-    Serial.write("Could not find a valid BMP280 sensor, check wiring!");
+//    Serial.write("!BMP");
   }
   bmp280.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
             Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */
@@ -14,8 +13,6 @@ void SensorModule::init() {
             Adafruit_BMP280::STANDBY_MS_500);
   bmpBasePressureHPa = bmp280.readPressure() / 100;
 
-  // GPS SETUP
-  //gpsSerial.begin(GPS_BAUD_RATE);
 }
 
 void SensorModule::loop() {
