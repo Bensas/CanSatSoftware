@@ -14,10 +14,10 @@ int CommunicationModule::receivePackets(XBee& xbee, ZBRxResponse& responseObj, Z
       }
     } else if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
       xbee.getResponse().getZBTxStatusResponse(requestStatusObj);
-      Serial.write("ZB_TX_STATUS_RESPONSE");
+//      Serial.write("ZB_TX_STATUS_RESPONSE");
       return ZB_TX_STATUS_RESPONSE;
     } else if (xbee.getResponse().getApiId() == AT_COMMAND_RESPONSE) {
-      Serial.write("AT_COMMAND_RESPONSE");
+//      Serial.write("AT_COMMAND_RESPONSE");
       xbee.getResponse().getAtCommandResponse(atCommandResponse);
       return AT_COMMAND_RESPONSE;
     }

@@ -50,7 +50,7 @@ class ContainerCommunicationModule : CommunicationModule {
     void (*setRtcTimeFromCommandPacket)(uint8_t* packetData, uint8_t packetLength);
     uint8_t (*generateMissionTimeString)();
 
-    void ContainerCommunicationModule::init(SoftwareSerial& groundXBeeSerial, Stream& payloadsXBeeSerial);
+    void ContainerCommunicationModule::init(Stream& groundXBeeSerial, Stream& payloadsXBeeSerial);
 
     void setRtcTimeFromPacket(uint8_t* packetData, uint8_t packetLength);
     void parseReceivedPacket(uint8_t* packetData, uint8_t packetLength);

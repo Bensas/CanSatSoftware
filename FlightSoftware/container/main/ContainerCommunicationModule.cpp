@@ -1,17 +1,17 @@
 #include "ContainerCommunicationModule.h"
 
-void ContainerCommunicationModule::init(SoftwareSerial& groundXBeeSerial, Stream& payloadsXBeeSerial) {
+void ContainerCommunicationModule::init(Stream& groundXBeeSerial, Stream& payloadsXBeeSerial) {
   // Start the serial port
   groundXBee.setSerial(groundXBeeSerial);
 //  payloadsXBee.setSerial(payloadsXBeeSerial);
-  Serial.begin(19200);
+//  Serial.begin(19200);
 //  EEPROM.get(PACKET_COUNT_EEPROM_ADDR, packetCount);
 }
 
 void ContainerCommunicationModule::parseReceivedPacket(uint8_t* packetData, uint8_t packetLength) {
-  Serial.write("Parse:");
-  Serial.write(packetData, packetLength);
-  Serial.write("\n");
+//  Serial.write("Parse:");
+//  Serial.write(packetData, packetLength);
+//  Serial.write("\n");
   if (packetData[0] == 'C') {
     parseCommandPacket(packetData, packetLength);
   } else {
@@ -29,10 +29,10 @@ void ContainerCommunicationModule::parseCommandPacket(uint8_t* packetData, uint8
     CMD,1000,SIMP,101325 provides a simulated pressure reading to the Container (101325 Pascals = approximately sea level). Note: this command is to be used only in simulation mode.
   */
   if (packetData[9] == 'C') { //CX command
-    if (packetData[12] == 'O' && packetData[13] == 'N')
-      Serial.write("CXON\n");
-    else
-      Serial.write("CXOFF\n");
+//    if (packetData[12] == 'O' && packetData[13] == 'N')
+////      Serial.write("CXON\n");
+//    else
+////      Serial.write("CXOFF\n");
     setContainerTelemetryActivated(packetData[12] == 'O' && packetData[13] == 'N');
   }
   else if (packetData[9] == 'S' && packetData[10] == 'I') { //SIM or SIMP command
@@ -114,8 +114,8 @@ void ContainerCommunicationModule::sendNextPayload2Command() {
 }
 
 void ContainerCommunicationModule::sendNextTelemetryPacket(){
-  Serial.write(telemetryPacketQueue.head->data, telemetryPacketQueue.head->dataLength);
-  Serial.write('\n');
+//  Serial.write(telemetryPacketQueue.head->data, telemetryPacketQueue.head->dataLength);
+//  Serial.write('\n');
   groundRequestObj = ZBTxRequest(groundAddress, telemetryPacketQueue.head->data, telemetryPacketQueue.head->dataLength);
   groundXBee.send(groundRequestObj);
   packetCount++;
@@ -141,7 +141,7 @@ void ContainerCommunicationModule::manageGroundCommunication() {
      }
   } else if (groundReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (groundRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
-      Serial.println("Ack biatch");
+//      Serial.println("Ack biatch");
       groundCommunicationState = STATE_IDLE;
     } else { //We got a status response but it wasn't an ACK, so we resend the packet
       sendNextTelemetryPacket();
@@ -152,7 +152,7 @@ void ContainerCommunicationModule::manageGroundCommunication() {
 //      Serial.write("No response");
   }
   if (groundCommunicationState == STATE_IDLE && !telemetryPacketQueue.isEmpty()) {
-    Serial.write("Send:");
+//    Serial.write("Send:");
     sendNextTelemetryPacket();
     telemetryPacketQueue.removeHead();
   }
@@ -171,7 +171,7 @@ void ContainerCommunicationModule::managePayloadsCommunication() {
     // }
   } else if (payloadsReceiveStatus == ZB_TX_STATUS_RESPONSE) { // We received a status update on a previously sent packet
     if (payloadsRequestStatusObj.getDeliveryStatus() == SUCCESS) { // We got an ACK Wohoo!
-      Serial.println("ack");
+//      Serial.println("ack");
       switch (payloadCommunicationState) {
         case STATE_WAITING_FOR_PAYLOAD_1_RESPONSE:
           payload1CommandQueue.removeHead();
